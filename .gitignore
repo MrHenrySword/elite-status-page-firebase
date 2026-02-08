@@ -4,3 +4,4 @@ functions/data.json
 functions/audit.log
 .firebase/
 firebase-debug.log
+.tmp-*.js
