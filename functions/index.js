@@ -328,7 +328,7 @@ const appPromise = (async () => {
 
 exports.api = onRequest(
 	{
-		region: process.env.FUNCTION_REGION || 'us-central1',
+		region: process.env.API_REGION || 'us-central1',
 		memory: '512MiB',
 		timeoutSeconds: 60
 	},
