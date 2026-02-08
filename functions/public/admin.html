@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - 3E Elite Status</title>
+    <link rel="icon" href="/assets/brand/Elite-Logo-01.png" type="image/png">
+    <link rel="apple-touch-icon" href="/assets/brand/Elite-Logo-01.png">
+    <meta property="og:title" content="3E Elite Status Admin">
+    <meta property="og:description" content="Manage status, incidents, and uptime.">
+    <meta property="og:image" content="/assets/brand/Elite-Logo-01.png">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/brand/Elite-Logo-01.png">
+    <link rel="stylesheet" href="/theme.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--surface);color:var(--text-primary);line-height:1.6}
+        a{color:var(--brand-primary);text-decoration:none}
+
+        /* Layout */
+        .app{display:flex;min-height:100vh}
+        .sidebar{width:240px;background:var(--brand-deep-purple);color:#fff;display:flex;flex-direction:column;position:fixed;height:100vh;z-index:50}
+        .sidebar-brand{padding:20px;font-size:16px;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px}
+        .sidebar-brand img{background:#fff;padding:4px;border-radius:6px}
+        .sidebar-brand svg{flex-shrink:0}
+        .sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
+        .nav-section{padding:0 12px;margin-bottom:8px}
+        .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);padding:8px 12px;font-weight:600}
+        .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:4px;color:rgba(255,255,255,.75);font-size:13px;cursor:pointer;transition:all .15s;margin-bottom:2px}
+        .nav-item:hover{background:rgba(255,255,255,.12);color:#fff}
+        .nav-item.active{background:rgba(255,255,255,.18);color:#fff;font-weight:600}
+        .nav-item .icon{width:18px;text-align:center;font-size:14px}
+        .sidebar-tools{padding:12px;border-bottom:1px solid rgba(255,255,255,.1)}
+        .sidebar-tools .project-select{width:100%;padding:9px 12px;border:1px solid rgba(255,255,255,.2);border-radius:4px;background:rgba(255,255,255,.08);color:#fff;font-size:13px}
+        .sidebar-tools .project-select option{color:#000}
+        .sidebar-tools .nav-item{margin-bottom:8px}
+        .sidebar-footer{padding:16px;border-top:1px solid rgba(255,255,255,.1)}
+        .user-badge{display:flex;align-items:center;gap:10px;padding:8px;border-radius:4px;cursor:pointer;transition:background .15s}
+        .user-badge:hover{background:rgba(255,255,255,.1)}
+        .user-avatar{width:32px;height:32px;border-radius:50%;background:var(--brand-primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+        .user-meta{flex:1}
+        .user-meta .name{font-size:13px;font-weight:500}
+        .user-meta .role{font-size:11px;color:rgba(255,255,255,.5)}
+
+        /* Main */
+        .main{flex:1;margin-left:240px}
+        .topbar{background:#fff;border-bottom:1px solid var(--border);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:40}
+        .topbar-title{font-size:20px;font-weight:600}
+        .topbar-actions{display:flex;gap:10px;align-items:center}
+        .project-select{padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:#fff}
+        .content{padding:24px}
+
+        /* Cards */
+        .card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:20px;box-shadow:var(--shadow-card)}
+        .tree-node{border-bottom:1px solid #f4f5f7;padding:10px 0}
+        .tree-row{display:flex;align-items:center;gap:10px}
+        .tree-row[draggable="true"]{cursor:grab}
+        .tree-row.dragging{opacity:.5}
+        .tree-row.drag-over{outline:1px dashed rgba(135,56,255,.45);outline-offset:2px}
+        .tree-name{flex:1;min-width:0}
+        .tree-children{margin-left:18px}
+        .tree-toggle{cursor:pointer;font-size:12px;color:var(--text-secondary);width:14px;display:inline-block}
+        .tree-collapsed .tree-children{display:none}
+        .card-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+        .card-head h3{font-size:15px;font-weight:600}
+        .card-body{padding:20px}
+
+        /* Stats */
+        .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+        .stat{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:20px;box-shadow:var(--shadow-soft)}
+        .stat-label{font-size:12px;color:var(--text-secondary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+        .stat-val{font-size:28px;font-weight:700}
+        .stat-val.green{color:var(--success)}
+        .stat-val.yellow{color:var(--warning)}
+        .stat-val.red{color:var(--error)}
+        .stat-val.blue{color:var(--brand-primary)}
+
+        /* Buttons */
+        .btn{padding:8px 16px;border:none;border-radius:3px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+        .btn-primary{background:var(--brand-primary);color:#fff}.btn-primary:hover{background:var(--brand-primary-hover)}
+        .btn-success{background:var(--success);color:#fff}.btn-success:hover{background:#188a57}
+        .btn-warning{background:var(--warning);color:#fff}.btn-warning:hover{background:#b97722}
+        .btn-danger{background:var(--error);color:#fff}.btn-danger:hover{background:#a7323f}
+        .btn-secondary{background:#fff;color:var(--text-primary);border:1px solid var(--border)}.btn-secondary:hover{background:#f0f1f7}
+        .btn-sm{padding:5px 10px;font-size:12px}
+        .btn-icon{padding:6px;width:32px;height:32px;justify-content:center}
+
+        /* Tables */
+        .table{width:100%;border-collapse:collapse}
+        .table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-secondary);padding:10px 16px;border-bottom:2px solid var(--border);font-weight:600}
+        .table td{padding:12px 16px;border-bottom:1px solid #f4f5f7;font-size:13px;vertical-align:middle}
+        .table tr:hover td{background:#fafbfc}
+        .table .actions{display:flex;gap:6px;justify-content:flex-end}
+        .table-wrap{overflow:auto;width:100%}
+        .table-wrap .table{min-width:640px}
+
+        /* Status badges */
+        .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}
+        .badge.operational{background:#e3fcef;color:#006644}
+        .badge.degraded_performance{background:#fff3cd;color:#856404}
+        .badge.partial_outage{background:#ffeeba;color:#856404}
+        .badge.major_outage{background:#f8d7da;color:#721c24}
+        .badge.under_maintenance{background:#ece6ff;color:#4a2ea6}
+        .badge.investigating{background:#fff3cd;color:#856404}
+        .badge.identified{background:#ffeeba;color:#856404}
+        .badge.monitoring{background:#cce5ff;color:#004085}
+        .badge.resolved{background:#e3fcef;color:#006644}
+        .badge.scheduled{background:#cce5ff;color:#004085}
+        .badge.in_progress{background:#fff3cd;color:#856404}
+        .badge.completed{background:#e3fcef;color:#006644}
+        .badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+        /* Modal */
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center}
+        .modal-overlay.show{display:flex}
+        .modal{background:#fff;border-radius:var(--radius-md);width:90%;max-width:600px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+        .modal-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+        .modal-head h3{font-size:18px;font-weight:600}
+        .modal-close{background:none;border:none;font-size:20px;color:var(--text-secondary);cursor:pointer;padding:4px}
+        .modal-body{padding:20px 24px;overflow-y:auto;flex:1}
+        .modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+
+        /* Forms */
+        .form-group{margin-bottom:16px}
+        .form-group label{display:block;font-size:13px;font-weight:500;margin-bottom:6px}
+        .form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;transition:border-color .15s}
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--brand-primary);box-shadow:0 0 0 2px rgba(135,56,255,.2)}
+        .form-group textarea{min-height:80px;resize:vertical}
+        .form-group .check-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+        .form-group .check-item{display:flex;align-items:center;gap:6px;font-size:13px;padding:4px 8px;background:#f7f8f9;border-radius:3px;cursor:pointer}
+        .form-group .check-item input{width:auto;margin:0}
+
+        /* Timeline for incident updates */
+        .timeline{position:relative;padding-left:24px}
+        .timeline::before{content:'';position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:var(--border)}
+        .timeline-item{position:relative;padding-bottom:16px}
+        .timeline-item:last-child{padding-bottom:0}
+        .timeline-dot{position:absolute;left:-20px;top:4px;width:12px;height:12px;border-radius:50%;border:2px solid #e8ebef;background:#fff}
+        .timeline-dot.investigating{border-color:var(--warning);background:var(--warning)}
+        .timeline-dot.identified{border-color:#e26b38;background:#e26b38}
+        .timeline-dot.monitoring{border-color:var(--brand-primary);background:var(--brand-primary)}
+        .timeline-dot.resolved{border-color:var(--success);background:var(--success)}
+        .timeline-status{font-size:12px;font-weight:600;text-transform:uppercase;margin-bottom:2px}
+        .timeline-msg{font-size:13px;color:#333;margin-bottom:2px}
+        .timeline-time{font-size:11px;color:var(--text-secondary)}
+
+        /* Empty state */
+        .empty{text-align:center;padding:40px 20px;color:var(--text-secondary)}
+        .empty-icon{font-size:32px;margin-bottom:8px}
+
+        /* Toast */
+        .toast{position:fixed;bottom:24px;right:24px;background:var(--brand-deep-purple);color:#fff;padding:12px 20px;border-radius:var(--radius-sm);font-size:13px;z-index:200;transform:translateY(80px);opacity:0;transition:all .3s}
+        .toast.show{transform:translateY(0);opacity:1}
+
+        /* Tab content */
+        .tab-page{display:none}
+        .tab-page.active{display:block}
+        .settings-subtabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:10px}
+        .settings-tab{padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer}
+        .settings-tab.active{background:var(--brand-primary);color:#fff;border-color:var(--brand-primary)}
+        .settings-subpage{display:none}
+        .settings-subpage.active{display:block}
+        .settings-grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:16px 24px}
+        .field-help{font-size:12px;color:#7a869a;margin-top:4px}
+        .checkbox-row{display:flex;align-items:center;gap:8px}
+        .analytics-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:8px 0 18px}
+        .analytics-card{border:1px solid var(--border);border-radius:8px;padding:12px;background:#fbfbfe}
+        .analytics-card .label{font-size:11px;text-transform:uppercase;color:#7a869a;margin-bottom:4px}
+        .analytics-card .value{font-size:22px;font-weight:700;color:#253858}
+        .daily-analytics-table{width:100%;border-collapse:collapse}
+        .daily-analytics-table th,.daily-analytics-table td{padding:8px 10px;border-bottom:1px solid #f1f2f7;font-size:12px;text-align:left}
+        .activity-list{border:1px solid var(--border);border-radius:8px;background:#fff}
+        .activity-item{padding:12px 14px;border-bottom:1px solid #f1f2f7}
+        .activity-item:last-child{border-bottom:none}
+        .activity-summary{font-size:13px;color:#172b4d;font-weight:600}
+        .activity-meta{font-size:12px;color:#7a869a;margin-top:2px}
+        .logo-drop{border:1px dashed rgba(9,30,66,.3);border-radius:8px;padding:18px;text-align:center;background:#fbfbfe;cursor:pointer}
+        .logo-drop:hover{background:#f4f5fb}
+        .logo-preview{max-height:64px;max-width:220px;object-fit:contain;margin:0 auto 10px;display:block}
+        .logo-drop-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+
+        @media(max-width:768px){
+            .sidebar{display:none}
+            .main{margin-left:0}
+            .topbar{padding:12px 16px}
+            .content{padding:16px}
+            .settings-grid{grid-template-columns:1fr}
+        }
+        @media(max-width:600px){
+            .topbar{flex-direction:column;align-items:flex-start;gap:10px}
+            .topbar-actions{width:100%;justify-content:space-between}
+            .card-body{padding:16px}
+            .stats{grid-template-columns:1fr}
+            .tree-row{flex-direction:column;align-items:flex-start}
+            .tree-row .actions{width:100%;justify-content:flex-end}
+            .modal{width:95%;max-height:95vh}
+            .form-group .check-group{flex-direction:column;align-items:flex-start}
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <img class="brand-logo mark" src="/assets/brand/Elite-Logo-01.png" alt="Elite">
+            <span>3E Elite Status</span>
+        </div>
+        <div class="sidebar-tools">
+            <select id="projectSelect" class="project-select"></select>
+            <a id="viewStatusLink" href="/index.html" class="nav-item" target="_blank"><span class="icon">&#128279;</span> View Status Page</a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-label">Dashboard</div>
+                <div class="nav-item active" data-tab="dashboard" onclick="showTab('dashboard')"><span class="icon">&#9632;</span> Overview</div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-label">Manage</div>
+                <div class="nav-item" data-tab="components" onclick="showTab('components')"><span class="icon">&#9881;</span> Components</div>
+                <div class="nav-item" data-tab="incidents" onclick="showTab('incidents')"><span class="icon">&#9888;</span> Incidents</div>
+                <div class="nav-item" data-tab="maintenance" onclick="showTab('maintenance')"><span class="icon">&#128736;</span> Maintenance</div>
+                <div class="nav-item" data-tab="subscribers" onclick="showTab('subscribers')"><span class="icon">&#9993;</span> Subscribers</div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-label">Configure</div>
+                <div class="nav-item" data-tab="projects" onclick="showTab('projects')"><span class="icon">&#128193;</span> Projects</div>
+                <div class="nav-item" data-tab="users" onclick="showTab('users')"><span class="icon">&#128101;</span> Users</div>
+                <div class="nav-item" data-tab="settings" onclick="showTab('settings')"><span class="icon">&#9881;</span> Settings</div>
+                <div class="nav-item" data-tab="platform" onclick="showTab('platform')"><span class="icon">&#9729;</span> Platform</div>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-badge">
+                <div class="user-avatar" id="userInitials">AD</div>
+                <div class="user-meta">
+                    <div class="name" id="userName">Admin</div>
+                    <div class="role">Administrator</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <div class="topbar-title" id="pageTitle">Dashboard</div>
+            <div class="topbar-actions">
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Dashboard -->
+            <div class="tab-page active" id="tab-dashboard">
+                <div class="stats" id="statsGrid"></div>
+                <div class="card">
+                    <div class="card-head"><h3>Quick Actions</h3></div>
+                    <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap">
+                        <button class="btn btn-primary" id="qaIncidentBtn" onclick="showTab('incidents');openIncidentModal()">Report Incident</button>
+                        <button class="btn btn-primary" id="qaMaintenanceBtn" onclick="showTab('maintenance');openMaintenanceModal()">Schedule Maintenance</button>
+                        <button class="btn btn-secondary" id="qaComponentBtn" onclick="showTab('components');openComponentModal()">Add Component</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-head"><h3>Recent Incidents</h3></div>
+                    <div class="card-body" id="recentIncidents"></div>
+                </div>
+            </div>
+
+            <!-- Components -->
+            <div class="tab-page" id="tab-components">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <h2 style="font-size:16px">Components</h2>
+                    <div style="display:flex;gap:8px">
+                    <button class="btn btn-primary" id="componentsAddBtn" onclick="openComponentModal()">+ Component</button>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom:16px">
+                    <div class="card-head"><h3>Components Settings</h3></div>
+                    <div class="card-body">
+                        <div class="form-group" style="max-width:360px">
+                            <label>Uptime Section</label>
+                            <select id="showUptime" onchange="saveShowUptime()">
+                                <option value="true">Show (Default)</option>
+                                <option value="false">Hide</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div id="componentsList"></div>
+            </div>
+
+            <!-- Incidents -->
+            <div class="tab-page" id="tab-incidents">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <h2 style="font-size:16px">Incidents</h2>
+                    <button class="btn btn-primary" id="incidentsAddBtn" onclick="openIncidentModal()">+ Create Incident</button>
+                </div>
+                <div id="incidentsList"></div>
+            </div>
+
+            <!-- Maintenance -->
+            <div class="tab-page" id="tab-maintenance">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <h2 style="font-size:16px">Scheduled Maintenance</h2>
+                    <button class="btn btn-primary" id="maintenanceAddBtn" onclick="openMaintenanceModal()">+ Schedule Maintenance</button>
+                </div>
+                <div id="maintenanceList"></div>
+            </div>
+
+            <!-- Subscribers -->
+            <div class="tab-page" id="tab-subscribers">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <h2 style="font-size:16px">Subscribers</h2>
+                </div>
+                <div id="subscribersList"></div>
+            </div>
+
+            <!-- Projects -->
+            <div class="tab-page" id="tab-projects">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <h2 style="font-size:16px">Projects</h2>
+                    <button class="btn btn-primary" id="projectsAddBtn" onclick="openProjectModal()">+ New Project</button>
+                </div>
+                <div id="projectsList"></div>
+            </div>
+
+            <!-- Users -->
+            <div class="tab-page" id="tab-users">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <h2 style="font-size:16px">Users</h2>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-secondary" onclick="loadUsers()">Refresh</button>
+                        <button class="btn btn-primary" onclick="openUserModal()">+ New User</button>
+                    </div>
+                </div>
+                <div id="usersList"></div>
+            </div>
+
+            <!-- Settings -->
+            <div class="tab-page" id="tab-settings">
+                <div class="card">
+                    <div class="card-head"><h3>Status Page Settings</h3></div>
+                    <div class="card-body">
+                        <div class="settings-subtabs">
+                            <button type="button" class="settings-tab active" id="settingsTabBtn-page-info" onclick="showSettingsSubtab('page-info')">Page Info</button>
+                            <button type="button" class="settings-tab" id="settingsTabBtn-custom-domain" onclick="showSettingsSubtab('custom-domain')">Custom Domain</button>
+                            <button type="button" class="settings-tab" id="settingsTabBtn-custom-email" onclick="showSettingsSubtab('custom-email')">Custom Email</button>
+                            <button type="button" class="settings-tab" id="settingsTabBtn-analytics" onclick="showSettingsSubtab('analytics')">Analytics</button>
+                            <button type="button" class="settings-tab" id="settingsTabBtn-activity-log" onclick="showSettingsSubtab('activity-log')">Activity Log</button>
+                        </div>
+                        <form id="settingsForm">
+                            <div class="settings-subpage active" id="settings-subtab-page-info">
+                                <div class="settings-grid">
+                                    <div class="form-group">
+                                        <label>Organization legal name</label>
+                                        <input type="text" id="setOrganizationLegalName">
+                                        <div class="field-help">Used only for invoicing purposes.</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Page name</label>
+                                        <input type="text" id="setPageName">
+                                        <div class="field-help">The public name of your website or service.</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Company website URL</label>
+                                        <input type="url" id="setCompanyUrl" placeholder="https://yourcompany.com">
+                                        <div class="field-help">Clicking the header logo on the status page forwards here.</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Support URL</label>
+                                        <input type="url" id="setSupportUrl" placeholder="https://support.yourcompany.com">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Privacy policy URL</label>
+                                        <input type="url" id="setPrivacyPolicyUrl" placeholder="https://yourcompany.com/privacy-policy">
+                                        <div class="field-help">Link shown to subscribers.</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Default SMS country code</label>
+                                        <select id="setSmsCountryCode">
+                                            <option value="+1">United States (+1)</option>
+                                            <option value="+44">United Kingdom (+44)</option>
+                                            <option value="+61">Australia (+61)</option>
+                                            <option value="+91">India (+91)</option>
+                                            <option value="+65">Singapore (+65)</option>
+                                        </select>
+                                        <div class="field-help">Default country code for SMS subscribers.</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Page time zone</label>
+                                        <select id="setTimezone">
+                                            <option>UTC</option><option>America/New_York</option><option>America/Chicago</option><option>America/Denver</option><option>America/Los_Angeles</option><option>Europe/London</option><option>Europe/Paris</option><option>Asia/Tokyo</option><option>Asia/Shanghai</option><option>Australia/Sydney</option>
+                                        </select>
+                                        <div class="field-help">Timezone your page uses for timestamps.</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Support Email</label>
+                                        <input type="email" id="setSupportEmail">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Public page title</label>
+                                        <input type="text" id="setPageTitle">
+                                    </div>
+                                    <div class="form-group" style="grid-column:1/-1">
+                                        <label>About This Site</label>
+                                        <textarea id="setAboutText" placeholder="Add a short description for your status page."></textarea>
+                                    </div>
+                                    <div class="form-group checkbox-row" style="grid-column:1/-1">
+                                        <input type="checkbox" id="setHideFromSearchEngines" style="width:auto">
+                                        <label for="setHideFromSearchEngines" style="margin:0">Hide my status page from search engines</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-subpage" id="settings-subtab-custom-domain">
+                                <div class="form-group">
+                                    <label>Custom Domain</label>
+                                    <input type="text" id="setCustomDomain" placeholder="status.example.com">
+                                    <div class="field-help">Primary publish domain for this project.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Redirect Domains</label>
+                                    <textarea id="setRedirectDomains" placeholder="status-old.example.com&#10;status-alt.example.com"></textarea>
+                                    <div class="field-help">One domain per line (or comma-separated). Each will redirect to the custom domain.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Publish URL</label>
+                                    <div id="publishUrlPreview" style="font-size:13px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#f7f8f9;color:#253858"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Expected DNS Target</label>
+                                    <input type="text" id="dnsExpectedTarget" readonly>
+                                    <div id="dnsInstructionPrimary" class="field-help">Configure DNS for your custom domain to point to this target.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Redirect Domain DNS</label>
+                                    <div id="dnsInstructionRedirect" class="field-help">Redirect domains should point to your primary custom domain or same app target.</div>
+                                </div>
+                                <div class="form-group">
+                                    <button type="button" class="btn btn-secondary" onclick="validateProjectDomains()">Validate DNS</button>
+                                    <div id="dnsValidationResults" style="margin-top:10px;font-size:12px;color:#42526e;background:#f7f8f9;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px">Validation not run yet.</div>
+                                </div>
+                            </div>
+
+                            <div class="settings-subpage" id="settings-subtab-custom-email">
+                                <div class="form-group">
+                                    <label>Logo</label>
+                                    <div id="emailLogoDrop" class="logo-drop" onclick="triggerEmailLogoUpload()">
+                                        <img id="emailLogoPreview" class="logo-preview" src="/assets/brand/Elite-Logo-01.png" alt="Email logo preview" style="display:none">
+                                        <div id="emailLogoPlaceholder">
+                                            <div style="font-size:14px;font-weight:600;color:#253858;margin-bottom:4px">Drag file here</div>
+                                            <div class="field-help">or click Upload image</div>
+                                        </div>
+                                        <div class="logo-drop-actions">
+                                            <button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation();triggerEmailLogoUpload();">Upload image</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation();copyLogoFromStatusPage();">Copy logo from status page</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation();clearEmailLogo();">Clear</button>
+                                        </div>
+                                    </div>
+                                    <input type="file" id="emailLogoFileInput" accept="image/*" style="display:none">
+                                    <input type="hidden" id="setNotificationLogoUrl">
+                                </div>
+                                <div class="settings-grid">
+                                    <div class="form-group">
+                                        <label>Send from name</label>
+                                        <input type="text" id="setNotificationFromName" placeholder="Your company name">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Send from email</label>
+                                        <input type="email" id="setNotificationFromEmail" placeholder="status@company.com">
+                                        <div class="field-help">Notifications are sent from this address (requires DNS setup).</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Reply to email</label>
+                                        <input type="email" id="setNotificationReplyToEmail" placeholder="support@company.com">
+                                        <div class="field-help">Replies from subscribers are sent to this address.</div>
+                                    </div>
+                                    <div class="form-group checkbox-row">
+                                        <input type="checkbox" id="setNotificationUseStatusLogo" style="width:auto">
+                                        <label for="setNotificationUseStatusLogo" style="margin:0">Use status page logo for emails</label>
+                                    </div>
+                                    <div class="form-group" style="grid-column:1/-1">
+                                        <label>Footer message</label>
+                                        <textarea id="setNotificationFooterMessage" placeholder="You received this email because you are subscribed..."></textarea>
+                                    </div>
+                                    <div class="form-group" style="grid-column:1/-1">
+                                        <label>Effective sender</label>
+                                        <input type="text" id="setEffectiveNotificationFromEmail" readonly>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-subpage" id="settings-subtab-analytics">
+                                <div class="settings-grid">
+                                    <div class="form-group">
+                                        <label>Google Analytics tracking</label>
+                                        <input type="text" id="setGaTrackingId" placeholder="G-XXXXXXXXXX">
+                                        <div class="field-help">Paste your GA Measurement ID.</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Brand Color</label>
+                                        <input type="color" id="setBrandColor" style="width:60px;height:36px;padding:2px">
+                                    </div>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                    <h3 style="font-size:14px;margin:0">Page Analytics</h3>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="loadAnalyticsData()">Refresh</button>
+                                </div>
+                                <div class="analytics-cards" id="analyticsCards"></div>
+                                <div class="card" style="box-shadow:none">
+                                    <div class="card-head"><h3>Daily Views</h3></div>
+                                    <div class="card-body" id="analyticsDailyTable"></div>
+                                </div>
+                            </div>
+
+                            <div class="settings-subpage" id="settings-subtab-activity-log">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                    <h3 style="font-size:14px;margin:0">Recent Changes</h3>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="loadActivityLog()">Refresh</button>
+                                </div>
+                                <div id="activityLogList" class="activity-list">
+                                    <div class="activity-item">
+                                        <div class="activity-summary">No activity yet.</div>
+                                        <div class="activity-meta">Changes by admins/editors will appear here.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top:16px">
+                            <button type="submit" class="btn btn-primary" id="settingsSaveBtn">Save Settings</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-head"><h3>Admin Menu Visibility</h3></div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Disable menu items</label>
+                            <div class="check-group">
+                                <label class="check-item"><input type="checkbox" id="toggle-components"> Components</label>
+                                <label class="check-item"><input type="checkbox" id="toggle-incidents"> Incidents</label>
+                                <label class="check-item"><input type="checkbox" id="toggle-maintenance"> Maintenance</label>
+                                <label class="check-item"><input type="checkbox" id="toggle-subscribers"> Subscribers</label>
+                                <label class="check-item"><input type="checkbox" id="toggle-projects"> Projects</label>
+                                <label class="check-item"><input type="checkbox" id="toggle-users"> Users</label>
+                                <label class="check-item"><input type="checkbox" id="toggle-settings"> Settings</label>
+                                <label class="check-item"><input type="checkbox" id="toggle-platform"> Platform</label>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="menuSaveBtn" onclick="saveMenuVisibility()">Save Menu Visibility</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Platform -->
+            <div class="tab-page" id="tab-platform">
+                <div class="card">
+                    <div class="card-head"><h3>Azure Service Settings</h3></div>
+                    <div class="card-body">
+                        <form id="platformSettingsForm">
+                            <div class="settings-grid">
+                                <div class="form-group"><label>Azure Tenant ID</label><input type="text" id="platTenantId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+                                <div class="form-group"><label>Azure Subscription ID</label><input type="text" id="platSubscriptionId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+                                <div class="form-group"><label>Resource Group</label><input type="text" id="platResourceGroup" placeholder="rg-status-prod"></div>
+                                <div class="form-group"><label>App Service Name</label><input type="text" id="platAppServiceName" placeholder="status-webapp-prod"></div>
+                                <div class="form-group"><label>Status Base Domain</label><input type="text" id="platStatusBaseDomain" placeholder="status.company.com"></div>
+                                <div class="form-group"><label>Key Vault Name</label><input type="text" id="platKeyVaultName" placeholder="kv-status-prod"></div>
+                                <div class="form-group"><label>Application Insights Name</label><input type="text" id="platAppInsightsName" placeholder="appi-status-prod"></div>
+                                <div class="form-group"><label>Storage Account</label><input type="text" id="platStorageAccountName" placeholder="ststatusprod"></div>
+                                <div class="form-group"><label>Cosmos Account</label><input type="text" id="platCosmosAccountName" placeholder="cosmos-status-prod"></div>
+                                <div class="form-group checkbox-row"><input type="checkbox" id="platUseManagedIdentity" style="width:auto"><label for="platUseManagedIdentity" style="margin:0">Use Managed Identity</label></div>
+                                <div class="form-group checkbox-row"><input type="checkbox" id="platEnableKeyVaultRefs" style="width:auto"><label for="platEnableKeyVaultRefs" style="margin:0">Use Key Vault references for secrets</label></div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="platformSaveBtn">Save Platform Settings</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
+                        <h3>Runtime Status</h3>
+                        <button class="btn btn-secondary btn-sm" type="button" onclick="loadPlatformStatus()">Refresh</button>
+                    </div>
+                    <div class="card-body" id="platformStatusBody">
+                        <div class="empty"><p>Loading platform status...</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="app-footer">
+    <div class="footer-inner">
+        <div class="brand">
+            <img class="brand-logo full" src="/assets/brand/Elite-Logo-01.png" alt="Elite Status">
+        </div>
+        <div class="footer-links">
+            <a href="/index.html">Status Home</a>
+            <a href="/admin.html">Admin</a>
+        </div>
+        <div class="muted">Enterprise status management</div>
+    </div>
+</footer>
+
+<!-- Component Modal -->
+<div class="modal-overlay" id="componentModal">
+    <div class="modal">
+        <div class="modal-head"><h3 id="componentModalTitle">Add Component</h3><button class="modal-close" onclick="closeModal('componentModal')">&times;</button></div>
+        <div class="modal-body">
+            <form id="componentForm">
+                <div class="form-group"><label>Name</label><input type="text" id="compName" required></div>
+                <div class="form-group"><label>Description</label><input type="text" id="compDesc"></div>
+                <div class="form-group"><label>Parent Component</label><select id="compParent"></select></div>
+                <div class="form-group"><label>Status</label>
+                    <select id="compStatus">
+                        <option value="operational">Operational</option>
+                        <option value="degraded_performance">Degraded Performance</option>
+                        <option value="partial_outage">Partial Outage</option>
+                        <option value="major_outage">Major Outage</option>
+                        <option value="under_maintenance">Under Maintenance</option>
+                    </select>
+                </div>
+                <input type="hidden" id="compId">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('componentModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveComponent()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Incident Modal -->
+<div class="modal-overlay" id="incidentModal">
+    <div class="modal">
+        <div class="modal-head"><h3>Create Incident</h3><button class="modal-close" onclick="closeModal('incidentModal')">&times;</button></div>
+        <div class="modal-body">
+            <form id="incidentForm">
+                <div class="form-group"><label>Title</label><input type="text" id="incTitle" required placeholder="Brief description of the incident"></div>
+                <div class="form-group"><label>Status</label>
+                    <select id="incStatus"><option value="investigating">Investigating</option><option value="identified">Identified</option><option value="monitoring">Monitoring</option><option value="resolved">Resolved</option></select>
+                </div>
+                <div class="form-group"><label>Impact</label>
+                    <select id="incImpact"><option value="none">None</option><option value="minor" selected>Minor</option><option value="major">Major</option><option value="critical">Critical</option></select>
+                </div>
+                <div class="form-group"><label>Affected Components</label><div class="check-group" id="incComponents"></div></div>
+                <div class="form-group"><label>Message</label><textarea id="incMessage" required placeholder="Describe what's happening..."></textarea></div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('incidentModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveIncident()">Create Incident</button>
+        </div>
+    </div>
+</div>
+
+<!-- Incident Update Modal -->
+<div class="modal-overlay" id="updateModal">
+    <div class="modal" style="max-width:500px">
+        <div class="modal-head"><h3>Post Incident Update</h3><button class="modal-close" onclick="closeModal('updateModal')">&times;</button></div>
+        <div class="modal-body">
+            <div class="form-group"><label>Status</label>
+                <select id="updStatus"><option value="investigating">Investigating</option><option value="identified">Identified</option><option value="monitoring">Monitoring</option><option value="resolved">Resolved</option></select>
+            </div>
+            <div class="form-group"><label>Message</label><textarea id="updMessage" required placeholder="Update message..."></textarea></div>
+            <input type="hidden" id="updIncidentId">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('updateModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="postIncidentUpdate()">Post Update</button>
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance Modal -->
+<div class="modal-overlay" id="maintenanceModal">
+    <div class="modal">
+                <div class="modal-head"><h3 id="maintenanceModalTitle">Schedule Maintenance</h3><button class="modal-close" onclick="closeModal('maintenanceModal')">&times;</button></div>
+        <div class="modal-body">
+            <form id="maintenanceForm">
+                <div class="form-group"><label>Title</label><input type="text" id="maintTitle" required></div>
+                <div class="form-group"><label>Message</label><textarea id="maintMessage" placeholder="Describe the maintenance..."></textarea></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group"><label>Start</label><input type="datetime-local" id="maintStart" required></div>
+                    <div class="form-group"><label>End</label><input type="datetime-local" id="maintEnd" required></div>
+                </div>
+                <div class="form-group"><label>Affected Components</label><div class="check-group" id="maintComponents"></div></div>
+                <input type="hidden" id="maintId">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('maintenanceModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveMaintenance()">Schedule</button>
+        </div>
+    </div>
+</div>
+
+<!-- Project Modal -->
+<div class="modal-overlay" id="projectModal">
+    <div class="modal" style="max-width:420px">
+        <div class="modal-head"><h3 id="projectModalTitle">New Project</h3><button class="modal-close" onclick="closeModal('projectModal')">&times;</button></div>
+        <div class="modal-body">
+            <form id="projectForm">
+                <div class="form-group"><label>Project Name</label><input type="text" id="projName" required></div>
+                <div class="form-group"><label>Project Slug</label><input type="text" id="projSlug" placeholder="optional"></div>
+                <input type="hidden" id="projId">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('projectModal')">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveProject()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- User Modal -->
+<div class="modal-overlay" id="userModal">
+    <div class="modal" style="max-width:420px">
+        <div class="modal-head"><h3 id="userModalTitle">New User</h3><button class="modal-close" onclick="closeModal('userModal')">&times;</button></div>
+        <div class="modal-body">
+            <form id="userForm">
+                <div class="form-group"><label>Name</label><input type="text" id="userNameInput"></div>
+                <div class="form-group"><label>Company Email</label><input type="email" id="userEmail" required placeholder="name@company.com"></div>
+                <div class="form-group"><label>Password</label><input type="password" id="userPassword" placeholder="Set a password"></div>
+                <div class="form-group"><label>Role</label>
+                    <select id="userRole">
+                        <option value="admin">Admin</option>
+                        <option value="editor">Editor</option>
+                        <option value="viewer">Viewer</option>
+                    </select>
+                </div>
+                <input type="hidden" id="userId">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('userModal')">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveUser()">Save</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Auth ──────────────────────────────────────────────────────────────────
+let API = localStorage.getItem('statusPageApiBase') || '';
+if (!API && window.location.protocol === 'file:') {
+    API = 'http://localhost:3000';
+}
+const headers = () => ({ 'Content-Type': 'application/json' });
+
+async function api(method, url, body) {
+    const opts = { method, headers: headers(), credentials: 'same-origin' };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(API + url, opts);
+    const contentType = r.headers.get('content-type') || '';
+    if (r.status === 401) { localStorage.removeItem('statusPageUser'); window.location.href = '/login.html'; return; }
+    if (!contentType.includes('application/json')) {
+        if ((!API || API === window.location.origin) && window.location.port !== '3000') {
+            try {
+                const retry = await fetch('http://localhost:3000' + url, opts);
+                const retryType = retry.headers.get('content-type') || '';
+                if (retryType.includes('application/json')) return retry.json();
+            } catch (e) {}
+        }
+        if (window.location.protocol === 'file:') {
+            toast('Open the app via http://localhost:3000/admin.html (not file://)');
+        }
+        const text = await r.text();
+        toast('API error: server did not return JSON');
+        throw new Error('Non-JSON response: ' + text.slice(0, 120));
+    }
+    return r.json();
+}
+
+async function logout() {
+    try { await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch {}
+    localStorage.removeItem('statusPageUser');
+    window.location.href = '/login.html';
+}
+
+let currentUserRole = 'viewer';
+function canEdit() { return currentUserRole === 'admin' || currentUserRole === 'editor'; }
+function isAdmin() { return currentUserRole === 'admin'; }
+
+// ── Projects ─────────────────────────────────────────────────────────────
+let projects = [];
+let currentProjectId = null;
+let currentProjectSlug = '';
+let currentProjectCustomDomain = '';
+const projectSelect = document.getElementById('projectSelect');
+const projectForm = document.getElementById('projectForm');
+
+projectForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveProject();
+});
+
+function projectPath(path) {
+    if (!currentProjectId) return path;
+    return '/api/v1/admin/projects/' + currentProjectId + path;
+}
+
+function normalizeDomainInput(value) {
+    return (value || '')
+        .trim()
+        .replace(/^https?:\/\//i, '')
+        .replace(/\/.*$/, '')
+        .replace(/:\d+$/, '')
+        .toLowerCase();
+}
+
+function parseRedirectDomainsInput(value) {
+    const raw = String(value || '');
+    const parts = raw.split(/[\n,]+/).map(normalizeDomainInput).filter(Boolean);
+    return [...new Set(parts)];
+}
+
+function renderDomainValidation(result) {
+    const panel = document.getElementById('dnsValidationResults');
+    if (!panel) return;
+    if (!result || result.error) {
+        panel.innerHTML = `<div style="color:#bf2600">${esc((result && result.error) || 'Validation failed')}</div>`;
+        return;
+    }
+    if (!result.results || !result.results.length) {
+        panel.innerHTML = '<div style="color:#7a869a">No domains configured for validation.</div>';
+        return;
+    }
+    panel.innerHTML = result.results.map((item) => {
+        const color = item.status === 'ok' ? '#0b875b' : (item.status === 'warning' ? '#b38600' : '#bf2600');
+        const notes = Array.isArray(item.notes) ? item.notes.join(' | ') : '';
+        const cname = Array.isArray(item.cnameRecords) && item.cnameRecords.length ? item.cnameRecords.join(', ') : '-';
+        const a = Array.isArray(item.aRecords) && item.aRecords.length ? item.aRecords.join(', ') : '-';
+        const aaaa = Array.isArray(item.aaaaRecords) && item.aaaaRecords.length ? item.aaaaRecords.join(', ') : '-';
+        return `<div style="padding:8px 0;border-bottom:1px solid #ebecf0">
+            <div><strong>${esc(item.domain)}</strong> <span style="color:${color};font-weight:600;text-transform:uppercase">${esc(item.status)}</span></div>
+            <div style="margin-top:4px">Expected: ${esc(item.expectedTarget || '-')}</div>
+            <div>CNAME: ${esc(cname)}</div>
+            <div>A: ${esc(a)}</div>
+            <div>AAAA: ${esc(aaaa)}</div>
+            <div style="margin-top:4px;color:${color}">${esc(notes || '-')}</div>
+        </div>`;
+    }).join('');
+}
+
+function renderEmailLogoPreview() {
+    const img = document.getElementById('emailLogoPreview');
+    const placeholder = document.getElementById('emailLogoPlaceholder');
+    const value = (document.getElementById('setNotificationLogoUrl').value || '').trim();
+    if (!img || !placeholder) return;
+    if (value) {
+        img.src = value;
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+    } else {
+        img.style.display = 'none';
+        placeholder.style.display = 'block';
+    }
+}
+
+function triggerEmailLogoUpload() {
+    const input = document.getElementById('emailLogoFileInput');
+    if (input) input.click();
+}
+
+function setEmailLogoFromFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        document.getElementById('setNotificationLogoUrl').value = String(reader.result || '');
+        document.getElementById('setNotificationUseStatusLogo').checked = false;
+        renderEmailLogoPreview();
+    };
+    reader.readAsDataURL(file);
+}
+
+function copyLogoFromStatusPage() {
+    document.getElementById('setNotificationLogoUrl').value = '/assets/brand/Elite-Logo-01.png';
+    document.getElementById('setNotificationUseStatusLogo').checked = true;
+    renderEmailLogoPreview();
+}
+
+function clearEmailLogo() {
+    document.getElementById('setNotificationLogoUrl').value = '';
+    renderEmailLogoPreview();
+}
+
+function initEmailLogoUpload() {
+    const input = document.getElementById('emailLogoFileInput');
+    const drop = document.getElementById('emailLogoDrop');
+    if (!input || !drop || input.dataset.bound === '1') return;
+    input.dataset.bound = '1';
+    input.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) setEmailLogoFromFile(file);
+        input.value = '';
+    });
+    ['dragenter', 'dragover'].forEach((evt) => {
+        drop.addEventListener(evt, (e) => {
+            e.preventDefault();
+            drop.style.borderColor = 'var(--brand-primary)';
+        });
+    });
+    ['dragleave', 'drop'].forEach((evt) => {
+        drop.addEventListener(evt, (e) => {
+            e.preventDefault();
+            drop.style.borderColor = 'rgba(9,30,66,.3)';
+        });
+    });
+    drop.addEventListener('drop', (e) => {
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) setEmailLogoFromFile(file);
+    });
+}
+
+function publishUrlForCurrentProject() {
+    const custom = normalizeDomainInput(currentProjectCustomDomain);
+    if (custom) {
+        const proto = (window.location.protocol === 'http:' || custom === 'localhost' || custom === '127.0.0.1') ? 'http://' : 'https://';
+        return proto + custom;
+    }
+    if (currentProjectSlug) return window.location.origin + '/p/' + currentProjectSlug;
+    return window.location.origin + '/index.html';
+}
+
+function updatePublishUrlPreview() {
+    const customField = document.getElementById('setCustomDomain');
+    const preview = document.getElementById('publishUrlPreview');
+    if (!preview) return;
+    const typed = customField ? normalizeDomainInput(customField.value) : '';
+    if (typed) {
+        const proto = (window.location.protocol === 'http:' || typed === 'localhost' || typed === '127.0.0.1') ? 'http://' : 'https://';
+        preview.textContent = proto + typed;
+        return;
+    }
+    preview.textContent = publishUrlForCurrentProject();
+}
+
+function updateViewLink() {
+    const link = document.getElementById('viewStatusLink');
+    link.href = publishUrlForCurrentProject();
+}
+
+async function loadProjectsList() {
+    projects = await api('GET', '/api/v1/admin/projects');
+    const selected = parseInt(localStorage.getItem('statusPageProjectId') || '0', 10);
+    if (!projects.length) {
+        currentProjectId = null;
+        currentProjectSlug = '';
+        currentProjectCustomDomain = '';
+        projectSelect.innerHTML = '<option value="">No projects</option>';
+        updateViewLink();
+        updatePublishUrlPreview();
+        renderProjects();
+        return;
+    }
+    if (!currentProjectId) {
+        currentProjectId = projects.find(p => p.id === selected) ? selected : projects[0].id;
+    }
+    projectSelect.innerHTML = projects.map(p =>
+        `<option value="${p.id}" ${p.id === currentProjectId ? 'selected' : ''}>${esc(p.name)}</option>`
+    ).join('');
+    const current = projects.find(p => p.id === currentProjectId);
+    currentProjectSlug = current ? current.slug : '';
+    currentProjectCustomDomain = current ? normalizeDomainInput(current.customDomain || '') : '';
+    updateViewLink();
+    updatePublishUrlPreview();
+    renderProjects();
+}
+
+projectSelect.addEventListener('change', async (e) => {
+    const id = parseInt(e.target.value, 10);
+    if (!id || id === currentProjectId) return;
+    await setCurrentProject(id);
+});
+
+async function setCurrentProject(id) {
+    currentProjectId = id;
+    localStorage.setItem('statusPageProjectId', String(id));
+    const current = projects.find(p => p.id === currentProjectId);
+    currentProjectSlug = current ? current.slug : '';
+    currentProjectCustomDomain = current ? normalizeDomainInput(current.customDomain || '') : '';
+    updateViewLink();
+    updatePublishUrlPreview();
+    allComponents = [];
+    await reloadAll();
+}
+
+function renderProjects() {
+    const container = document.getElementById('projectsList');
+    if (!projects.length) {
+        container.innerHTML = '<div class="empty"><div class="empty-icon">&#128193;</div><p>No projects yet</p></div>';
+        return;
+    }
+    container.innerHTML = `<div class="card"><div class="card-body">
+        <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Slug</th><th>Domain</th><th>Created</th><th style="text-align:right">Actions</th></tr></thead><tbody>
+        ${projects.map(p => `
+            <tr>
+                <td><strong>${esc(p.name)}</strong></td>
+                <td style="color:#7a869a">${esc(p.slug)}</td>
+                <td style="color:#7a869a">${esc(p.customDomain || '-')}</td>
+                <td style="color:#7a869a">${new Date(p.createdAt).toLocaleDateString()}</td>
+                <td class="actions">
+                    ${canEdit() ? `<button class="btn btn-sm btn-secondary" onclick="openProjectModal(${p.id})">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteProject(${p.id})">Delete</button>` : ''}
+                </td>
+            </tr>
+        `).join('')}
+        </tbody></table></div>
+    </div></div>`;
+}
+
+function openProjectModal(id) {
+    if (!requireEdit()) return;
+    const project = projects.find(p => p.id === id);
+    document.getElementById('projectModalTitle').textContent = project ? 'Edit Project' : 'New Project';
+    document.getElementById('projName').value = project ? project.name : '';
+    document.getElementById('projSlug').value = project ? project.slug : '';
+    document.getElementById('projId').value = project ? project.id : '';
+    openModal('projectModal');
+}
+
+async function saveProject() {
+    if (!requireEdit()) return;
+    const id = document.getElementById('projId').value;
+    const name = document.getElementById('projName').value.trim();
+    const slug = document.getElementById('projSlug').value.trim();
+    if (!name) return;
+    if (id) {
+        const payload = { name };
+        if (slug) payload.slug = slug;
+        await api('PUT', '/api/v1/admin/projects/' + id, payload);
+        toast('Project updated');
+    } else {
+        const payload = { name };
+        if (slug) payload.slug = slug;
+        const created = await api('POST', '/api/v1/admin/projects', payload);
+        toast('Project created');
+        if (created && created.id) currentProjectId = created.id;
+    }
+    closeModal('projectModal');
+    await loadProjectsList();
+    if (currentProjectId) await setCurrentProject(currentProjectId);
+}
+
+async function deleteProject(id) {
+    if (!requireEdit()) return;
+    if (!confirm('Delete this project?')) return;
+    await api('DELETE', '/api/v1/admin/projects/' + id);
+    toast('Project deleted');
+    if (currentProjectId === id) currentProjectId = null;
+    await loadProjectsList();
+    if (currentProjectId) await setCurrentProject(currentProjectId);
+}
+
+async function reloadAll() {
+    if (!currentProjectId) return;
+    await loadComponents();
+    await Promise.all([loadDashboard(), loadIncidents(), loadMaintenances(), loadSubscribers(), loadSettings()]);
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function showTab(name) {
+    if (disabledTabs[name]) return;
+    document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const titles = { dashboard: 'Dashboard', components: 'Components', incidents: 'Incidents', maintenance: 'Scheduled Maintenance', subscribers: 'Subscribers', projects: 'Projects', users: 'Users', settings: 'Settings', platform: 'Platform' };
+    document.getElementById('pageTitle').textContent = titles[name] || name;
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(n => { if (n.textContent.trim().toLowerCase().includes(name === 'dashboard' ? 'overview' : name)) n.classList.add('active'); });
+    // Refresh data
+    if (name === 'dashboard') loadDashboard();
+    if (name === 'components') loadComponents();
+    if (name === 'incidents') loadIncidents();
+    if (name === 'maintenance') loadMaintenances();
+    if (name === 'subscribers') loadSubscribers();
+    if (name === 'projects') loadProjectsList();
+    if (name === 'users') loadUsers();
+    if (name === 'settings') loadSettings();
+    if (name === 'platform') { loadPlatformSettings(); loadPlatformStatus(); }
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function requireEdit() {
+    if (!canEdit()) { toast('Viewer access: changes are disabled.'); return false; }
+    return true;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────
+async function loadDashboard() {
+    const stats = await api('GET', projectPath('/stats'));
+    document.getElementById('statsGrid').innerHTML = `
+        <div class="stat"><div class="stat-label">Total Components</div><div class="stat-val blue">${stats.totalComponents}</div></div>
+        <div class="stat"><div class="stat-label">Operational</div><div class="stat-val green">${stats.operationalComponents}</div></div>
+        <div class="stat"><div class="stat-label">Active Incidents</div><div class="stat-val ${stats.activeIncidents > 0 ? 'red' : 'green'}">${stats.activeIncidents}</div></div>
+        <div class="stat"><div class="stat-label">Scheduled Maintenance</div><div class="stat-val yellow">${stats.scheduledMaintenances}</div></div>
+        <div class="stat"><div class="stat-label">Subscribers</div><div class="stat-val blue">${stats.totalSubscribers}</div></div>
+    `;
+    const incidents = await api('GET', projectPath('/incidents'));
+    const recent = incidents.slice(0, 5);
+    if (recent.length === 0) {
+        document.getElementById('recentIncidents').innerHTML = '<div class="empty"><div class="empty-icon">&#10003;</div><p>No incidents</p></div>';
+    } else {
+        document.getElementById('recentIncidents').innerHTML = recent.map(i =>
+            `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f4f5f7">
+                <div><strong style="font-size:14px">${esc(i.title)}</strong><br><span style="font-size:12px;color:#7a869a">${new Date(i.createdAt).toLocaleString()}</span></div>
+                <span class="badge ${i.status}"><span class="badge-dot"></span>${i.status}</span>
+            </div>`
+        ).join('');
+    }
+}
+
+// ── Components ────────────────────────────────────────────────────────────
+let allComponents = [];
+let expandedNodes = new Set();
+
+async function loadComponents() {
+    allComponents = await api('GET', projectPath('/components'));
+    renderComponents();
+}
+
+function renderComponents() {
+    const container = document.getElementById('componentsList');
+    const tree = buildTree(allComponents);
+    if (!tree.length) {
+        container.innerHTML = '<div class="empty"><div class="empty-icon">&#9881;</div><p>No components yet. Create one to get started!</p></div>';
+        return;
+    }
+    container.innerHTML = `<div class="card"><div class="card-body">${tree.map(n => renderTreeRow(n, 0)).join('')}</div></div>`;
+    bindTreeDnD();
+}
+
+function buildTree(list) {
+    const map = new Map();
+    for (const c of list) map.set(c.id, { ...c, children: [] });
+    const roots = [];
+    for (const c of map.values()) {
+        if (c.parentId && map.has(c.parentId)) map.get(c.parentId).children.push(c);
+        else roots.push(c);
+    }
+    const sortTree = (nodes) => {
+        nodes.sort((a, b) => (a.order || 0) - (b.order || 0));
+        for (const n of nodes) {
+            if (n.children && n.children.length) sortTree(n.children);
+        }
+    };
+    sortTree(roots);
+    return roots;
+}
+
+function renderTreeRow(node, depth) {
+    const indent = depth * 18;
+    const hasChildren = node.children && node.children.length;
+    const expanded = expandedNodes.has(node.id);
+    const toggle = hasChildren ? `<span class="tree-toggle" onclick="toggleNode(${node.id});event.stopPropagation()">${expanded ? '&#9660;' : '&#9654;'}</span>` : '<span class="tree-toggle"></span>';
+    return `<div class="tree-node ${expanded ? '' : 'tree-collapsed'}">
+        <div class="tree-row" data-id="${node.id}" data-parent="${node.parentId || ''}" draggable="true">
+            <div class="tree-name" style="padding-left:${indent}px">
+                ${toggle}<strong>${esc(node.name)}</strong>
+                <div style="font-size:12px;color:#7a869a">${esc(node.description || '')}</div>
+            </div>
+            <span class="badge ${node.status}"><span class="badge-dot"></span>${statusLabel(node.status)}</span>
+            ${canEdit() ? `<div class="actions">
+                <button class="btn btn-sm btn-secondary" onclick="editComponent(${node.id})">Edit</button>
+                <button class="btn btn-sm btn-secondary" onclick="duplicateComponent(${node.id})">Duplicate</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteComponent(${node.id})">Delete</button>
+            </div>` : ''}
+        </div>
+        ${hasChildren ? `<div class="tree-children">${node.children.map(c => renderTreeRow(c, depth + 1)).join('')}</div>` : ''}
+    </div>`;
+}
+
+function toggleNode(id) {
+    if (expandedNodes.has(id)) expandedNodes.delete(id);
+    else expandedNodes.add(id);
+    renderComponents();
+}
+
+let dragInfo = null;
+function bindTreeDnD() {
+    document.querySelectorAll('#componentsList .tree-row').forEach(row => {
+        row.addEventListener('dragstart', onDragStart);
+        row.addEventListener('dragover', onDragOver);
+        row.addEventListener('drop', onDrop);
+        row.addEventListener('dragend', onDragEnd);
+    });
+}
+
+function onDragStart(e) {
+    const row = e.currentTarget;
+    dragInfo = {
+        id: parseInt(row.dataset.id, 10),
+        parentId: row.dataset.parent ? parseInt(row.dataset.parent, 10) : null
+    };
+    row.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragOver(e) {
+    if (!dragInfo) return;
+    const row = e.currentTarget;
+    const targetParent = row.dataset.parent ? parseInt(row.dataset.parent, 10) : null;
+    if (targetParent !== dragInfo.parentId) return;
+    e.preventDefault();
+    row.classList.add('drag-over');
+    e.dataTransfer.dropEffect = 'move';
+}
+
+async function onDrop(e) {
+    if (!dragInfo) return;
+    e.preventDefault();
+    const row = e.currentTarget;
+    row.classList.remove('drag-over');
+    const targetId = parseInt(row.dataset.id, 10);
+    if (!targetId || targetId === dragInfo.id) return;
+    const parentId = row.dataset.parent ? parseInt(row.dataset.parent, 10) : null;
+    if (parentId !== dragInfo.parentId) return;
+    const siblings = allComponents
+        .filter(c => (c.parentId || null) === parentId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+    const ids = siblings.map(c => c.id).filter(id => id !== dragInfo.id);
+    const targetIndex = ids.indexOf(targetId);
+    if (targetIndex < 0) return;
+    ids.splice(targetIndex, 0, dragInfo.id);
+    ids.forEach((id, idx) => {
+        const comp = allComponents.find(c => c.id === id);
+        if (comp) comp.order = idx;
+    });
+    await api('POST', projectPath('/components/reorder'), { parentId, orderedIds: ids });
+    renderComponents();
+}
+
+function onDragEnd() {
+    document.querySelectorAll('#componentsList .tree-row.drag-over').forEach(r => r.classList.remove('drag-over'));
+    document.querySelectorAll('#componentsList .tree-row.dragging').forEach(r => r.classList.remove('dragging'));
+    dragInfo = null;
+}
+
+function openComponentModal(comp) {
+    if (!requireEdit()) return;
+    document.getElementById('componentModalTitle').textContent = comp ? 'Edit Component' : 'Add Component';
+    document.getElementById('compName').value = comp ? comp.name : '';
+    document.getElementById('compDesc').value = comp ? (comp.description || '') : '';
+    document.getElementById('compStatus').value = comp ? comp.status : 'operational';
+    document.getElementById('compId').value = comp ? comp.id : '';
+    const options = allComponents
+        .filter(c => !comp || c.id !== comp.id)
+        .map(c => `<option value="${c.id}" ${comp && comp.parentId === c.id ? 'selected' : ''}>${esc(c.name)}</option>`)
+        .join('');
+    document.getElementById('compParent').innerHTML = '<option value="">No parent</option>' + options;
+    openModal('componentModal');
+}
+
+function editComponent(id) {
+    const comp = allComponents.find(c => c.id === id);
+    if (comp) openComponentModal(comp);
+}
+
+async function duplicateComponent(id) {
+    if (!requireEdit()) return;
+    const comp = allComponents.find(c => c.id === id);
+    if (!comp) return;
+    const data = {
+        name: comp.name + ' (Copy)',
+        description: comp.description || '',
+        parentId: comp.parentId || null,
+        status: comp.status || 'operational'
+    };
+    await api('POST', projectPath('/components'), data);
+    toast('Component duplicated');
+    loadComponents();
+}
+
+async function saveComponent() {
+    if (!requireEdit()) return;
+    const id = document.getElementById('compId').value;
+    const data = {
+        name: document.getElementById('compName').value,
+        description: document.getElementById('compDesc').value,
+        parentId: parseInt(document.getElementById('compParent').value) || null,
+        status: document.getElementById('compStatus').value
+    };
+    if (!data.name) return;
+    if (id) await api('PUT', projectPath('/components/' + id), data);
+    else await api('POST', projectPath('/components'), data);
+    closeModal('componentModal');
+    toast(id ? 'Component updated' : 'Component created');
+    loadComponents();
+}
+
+async function deleteComponent(id) {
+    if (!requireEdit()) return;
+    if (!confirm('Delete this component?')) return;
+    await api('DELETE', projectPath('/components/' + id));
+    toast('Component deleted');
+    loadComponents();
+}
+
+
+// ── Incidents ─────────────────────────────────────────────────────────────
+async function loadIncidents() {
+    if (!allComponents.length) allComponents = await api('GET', projectPath('/components'));
+    const incidents = await api('GET', projectPath('/incidents'));
+    const container = document.getElementById('incidentsList');
+    if (incidents.length === 0) {
+        container.innerHTML = '<div class="empty"><div class="empty-icon">&#10003;</div><p>No incidents reported</p></div>';
+        return;
+    }
+    container.innerHTML = incidents.map(inc => {
+        const affected = (inc.affectedComponents || []).map(id => {
+            const c = allComponents.find(x => x.id === id);
+            return c ? c.name : 'Unknown';
+        }).join(', ');
+        const updates = [...(inc.updates || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        return `<div class="card">
+            <div class="card-head">
+                <div><h3>${esc(inc.title)}</h3><div style="font-size:12px;color:#7a869a;margin-top:2px">${affected ? 'Affects: ' + esc(affected) : ''} &bull; ${new Date(inc.createdAt).toLocaleString()}</div></div>
+                <div style="display:flex;gap:6px;align-items:center">
+                    <span class="badge ${inc.status}"><span class="badge-dot"></span>${statusLabel(inc.status)}</span>
+                    ${canEdit() && inc.status !== 'resolved' ? `<button class="btn btn-sm btn-warning" onclick="openUpdateModal(${inc.id},'${inc.status}')">Update</button>` : ''}
+                    ${canEdit() ? `<button class="btn btn-sm btn-danger" onclick="deleteIncident(${inc.id})">Delete</button>` : ''}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="timeline">${updates.map(u => `
+                    <div class="timeline-item">
+                        <div class="timeline-dot ${u.status}"></div>
+                        <div class="timeline-status" style="color:inherit">${statusLabel(u.status)}</div>
+                        <div class="timeline-msg">${esc(u.message)}</div>
+                        <div class="timeline-time">${new Date(u.createdAt).toLocaleString()}</div>
+                    </div>`).join('')}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function openIncidentModal() {
+    if (!requireEdit()) return;
+    document.getElementById('incTitle').value = '';
+    document.getElementById('incStatus').value = 'investigating';
+    document.getElementById('incImpact').value = 'minor';
+    document.getElementById('incMessage').value = '';
+    renderComponentChecks('incComponents');
+    openModal('incidentModal');
+}
+
+function renderComponentChecks(containerId, selectedIds) {
+    const selected = new Set(selectedIds || []);
+    document.getElementById(containerId).innerHTML = allComponents.map(c =>
+        `<label class="check-item"><input type="checkbox" value="${c.id}" ${selected.has(c.id) ? 'checked' : ''}> ${esc(c.name)}</label>`
+    ).join('');
+}
+
+async function saveIncident() {
+    if (!requireEdit()) return;
+    const data = {
+        title: document.getElementById('incTitle').value,
+        status: document.getElementById('incStatus').value,
+        impact: document.getElementById('incImpact').value,
+        message: document.getElementById('incMessage').value,
+        affectedComponents: [...document.querySelectorAll('#incComponents input:checked')].map(i => parseInt(i.value))
+    };
+    if (!data.title || !data.message) return;
+    await api('POST', projectPath('/incidents'), data);
+    closeModal('incidentModal');
+    toast('Incident created');
+    loadIncidents();
+    loadDashboard();
+}
+
+function openUpdateModal(incId, currentStatus) {
+    if (!requireEdit()) return;
+    document.getElementById('updIncidentId').value = incId;
+    document.getElementById('updStatus').value = currentStatus;
+    document.getElementById('updMessage').value = '';
+    openModal('updateModal');
+}
+
+async function postIncidentUpdate() {
+    if (!requireEdit()) return;
+    const incId = document.getElementById('updIncidentId').value;
+    const data = { status: document.getElementById('updStatus').value, message: document.getElementById('updMessage').value };
+    if (!data.message) return;
+    await api('POST', projectPath('/incidents/' + incId + '/updates'), data);
+    closeModal('updateModal');
+    toast('Incident updated');
+    loadIncidents();
+    loadDashboard();
+}
+
+async function deleteIncident(id) {
+    if (!requireEdit()) return;
+    if (!confirm('Delete this incident?')) return;
+    await api('DELETE', projectPath('/incidents/' + id));
+    toast('Incident deleted');
+    loadIncidents();
+    loadDashboard();
+}
+
+// ── Maintenance ───────────────────────────────────────────────────────────
+async function loadMaintenances() {
+    if (!allComponents.length) allComponents = await api('GET', projectPath('/components'));
+    const list = await api('GET', projectPath('/maintenances'));
+    window.__maintenanceCache = list || [];
+    const container = document.getElementById('maintenanceList');
+    if (list.length === 0) {
+        container.innerHTML = '<div class="empty"><div class="empty-icon">&#128736;</div><p>No scheduled maintenances</p></div>';
+        return;
+    }
+    container.innerHTML = list.map(m => {
+        const affected = (m.affectedComponents || []).map(id => { const c = allComponents.find(x => x.id === id); return c ? c.name : 'Unknown'; }).join(', ');
+        return `<div class="card">
+            <div class="card-head">
+                <div><h3>${esc(m.title)}</h3><div style="font-size:12px;color:#7a869a;margin-top:2px">${new Date(m.scheduledStart).toLocaleString()} - ${new Date(m.scheduledEnd).toLocaleString()}${affected ? ' &bull; ' + esc(affected) : ''}</div></div>
+                <div style="display:flex;gap:6px;align-items:center">
+                    <span class="badge ${m.status}"><span class="badge-dot"></span>${statusLabel(m.status)}</span>
+                    ${canEdit() ? `<button class="btn btn-sm btn-secondary" onclick="openMaintenanceModal(${m.id})">Edit</button>` : ''}
+                    ${canEdit() && m.status === 'scheduled' ? `<button class="btn btn-sm btn-warning" onclick="startMaintenance(${m.id})">Start</button>` : ''}
+                    ${canEdit() && m.status === 'in_progress' ? `<button class="btn btn-sm btn-success" onclick="completeMaintenance(${m.id})">Complete</button>` : ''}
+                    ${canEdit() ? `<button class="btn btn-sm btn-danger" onclick="deleteMaintenance(${m.id})">Delete</button>` : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function openMaintenanceModal(id) {
+    if (!requireEdit()) return;
+    const maint = (typeof id === 'number') ? ((window.__maintenanceCache || []).find(m => m.id === id)) : null;
+    document.getElementById('maintenanceModalTitle').textContent = maint ? 'Edit Maintenance' : 'Schedule Maintenance';
+    document.getElementById('maintTitle').value = maint ? maint.title : '';
+    document.getElementById('maintMessage').value = maint ? (maint.message || '') : '';
+    document.getElementById('maintStart').value = maint ? toLocalInput(maint.scheduledStart) : '';
+    document.getElementById('maintEnd').value = maint ? toLocalInput(maint.scheduledEnd) : '';
+    document.getElementById('maintId').value = maint ? maint.id : '';
+    renderComponentChecks('maintComponents', maint ? (maint.affectedComponents || []) : []);
+    openModal('maintenanceModal');
+}
+
+async function saveMaintenance() {
+    if (!requireEdit()) return;
+    const id = document.getElementById('maintId').value;
+    const data = {
+        title: document.getElementById('maintTitle').value,
+        message: document.getElementById('maintMessage').value,
+        scheduledStart: new Date(document.getElementById('maintStart').value).toISOString(),
+        scheduledEnd: new Date(document.getElementById('maintEnd').value).toISOString(),
+        affectedComponents: [...document.querySelectorAll('#maintComponents input:checked')].map(i => parseInt(i.value))
+    };
+    if (!data.title || !data.scheduledStart || !data.scheduledEnd) return;
+    if (id) await api('PUT', projectPath('/maintenances/' + id), data);
+    else await api('POST', projectPath('/maintenances'), data);
+    closeModal('maintenanceModal');
+    toast(id ? 'Maintenance updated' : 'Maintenance scheduled');
+    loadMaintenances();
+}
+
+function toLocalInput(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function startMaintenance(id) { await api('PUT', projectPath('/maintenances/' + id), { status: 'in_progress' }); toast('Maintenance started'); loadMaintenances(); }
+async function completeMaintenance(id) { if (!requireEdit()) return; await api('PUT', projectPath('/maintenances/' + id), { status: 'completed' }); toast('Maintenance completed'); loadMaintenances(); }
+async function deleteMaintenance(id) { if (!requireEdit()) return; if (!confirm('Delete?')) return; await api('DELETE', projectPath('/maintenances/' + id)); toast('Deleted'); loadMaintenances(); }
+
+// ── Subscribers ───────────────────────────────────────────────────────────
+async function loadSubscribers() {
+    const list = await api('GET', projectPath('/subscribers'));
+    const container = document.getElementById('subscribersList');
+    if (list.length === 0) { container.innerHTML = '<div class="empty"><div class="empty-icon">&#9993;</div><p>No subscribers yet</p></div>'; return; }
+    container.innerHTML = `<div class="card"><div class="card-body"><div class="table-wrap"><table class="table"><thead><tr><th>Email</th><th>Subscribed</th><th style="text-align:right">Actions</th></tr></thead><tbody>${list.map(s =>
+        `<tr><td>${esc(s.email || s.webhook || '-')}</td><td style="color:#7a869a">${new Date(s.createdAt).toLocaleDateString()}</td><td class="actions"><button class="btn btn-sm btn-danger" onclick="deleteSubscriber(${s.id})">Remove</button></td></tr>`
+    ).join('')}</tbody></table></div></div></div>`;
+}
+
+async function deleteSubscriber(id) { if (!requireEdit()) return; await api('DELETE', projectPath('/subscribers/' + id)); toast('Subscriber removed'); loadSubscribers(); }
+
+// ── Users ─────────────────────────────────────────────────────────────────
+let usersCache = [];
+async function loadUsers() {
+    const res = await api('GET', '/api/v1/admin/users');
+    usersCache = Array.isArray(res) ? res : (res && res.users ? res.users : []);
+    renderUsersList();
+}
+
+function renderUsersList() {
+    const container = document.getElementById('usersList');
+    if (!usersCache.length) {
+        container.innerHTML = '<div class="empty"><div class="empty-icon">&#128101;</div><p>No users yet</p></div>';
+        return;
+    }
+    container.innerHTML = `<div class="card"><div class="card-body"><div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Created</th><th style="text-align:right">Actions</th></tr></thead><tbody>
+        ${usersCache.map(u => `
+            <tr>
+                <td>${esc(u.name || '')}</td>
+                <td>${esc(u.email || u.username)}</td>
+                <td>${esc(u.role || 'admin')}</td>
+                <td style="color:#7a869a">${new Date(u.createdAt).toLocaleDateString()}</td>
+                <td class="actions">
+                    <button class="btn btn-sm btn-secondary" onclick="openUserModal(${u.id})">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Delete</button>
+                </td>
+            </tr>
+        `).join('')}
+    </tbody></table></div></div></div>`;
+}
+
+function openUserModal(id) {
+    if (!isAdmin()) { toast('Admin only'); return; }
+    const user = usersCache.find(u => u.id === id);
+    document.getElementById('userModalTitle').textContent = user ? 'Edit User' : 'New User';
+    document.getElementById('userNameInput').value = user ? (user.name || '') : '';
+    document.getElementById('userEmail').value = user ? (user.email || user.username || '') : '';
+    document.getElementById('userPassword').value = '';
+    document.getElementById('userRole').value = user ? (user.role || 'admin') : 'admin';
+    document.getElementById('userId').value = user ? user.id : '';
+    openModal('userModal');
+}
+
+async function saveUser() {
+    if (!isAdmin()) { toast('Admin only'); return; }
+    const id = document.getElementById('userId').value;
+    const data = {
+        name: document.getElementById('userNameInput').value,
+        email: document.getElementById('userEmail').value.trim(),
+        password: document.getElementById('userPassword').value,
+        role: document.getElementById('userRole').value
+    };
+    if (!data.email) return;
+    if (!id && !data.password) { toast('Password required for new user'); return; }
+    if (!data.password) delete data.password;
+    let result;
+    if (id) result = await api('PUT', '/api/v1/admin/users/' + id, data);
+    else result = await api('POST', '/api/v1/admin/users', data);
+    if (!result || result.error || !result.id) {
+        toast(result && result.error ? result.error : 'User was not created');
+        await loadUsers();
+        return;
+    }
+    closeModal('userModal');
+    toast(id ? 'User updated' : 'User created');
+    if (result && result.id) {
+        if (id) {
+            const idx = usersCache.findIndex(u => u.id === result.id);
+            if (idx >= 0) usersCache[idx] = result;
+        } else {
+            usersCache.push(result);
+        }
+        renderUsersList();
+    } else {
+        loadUsers();
+    }
+}
+
+async function deleteUser(id) {
+    if (!isAdmin()) { toast('Admin only'); return; }
+    if (!confirm('Delete this user?')) return;
+    await api('DELETE', '/api/v1/admin/users/' + id);
+    toast('User deleted');
+    loadUsers();
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────
+let disabledTabs = {};
+let activeSettingsSubtab = 'page-info';
+
+function showSettingsSubtab(name) {
+    activeSettingsSubtab = name;
+    document.querySelectorAll('.settings-tab').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById('settingsTabBtn-' + name);
+    if (activeBtn) activeBtn.classList.add('active');
+    document.querySelectorAll('.settings-subpage').forEach(p => p.classList.remove('active'));
+    const activePage = document.getElementById('settings-subtab-' + name);
+    if (activePage) activePage.classList.add('active');
+    if (name === 'analytics') loadAnalyticsData();
+    if (name === 'activity-log') loadActivityLog();
+}
+
+async function loadDomainConfig() {
+    const cfg = await api('GET', projectPath('/domain-config'));
+    if (cfg && cfg.error) return;
+    const targetInput = document.getElementById('dnsExpectedTarget');
+    if (targetInput) targetInput.value = cfg.expectedTarget || '';
+    const primaryInfo = document.getElementById('dnsInstructionPrimary');
+    if (primaryInfo) primaryInfo.textContent = (cfg.instructions && cfg.instructions.primary) || '';
+    const redirectInfo = document.getElementById('dnsInstructionRedirect');
+    if (redirectInfo) redirectInfo.textContent = (cfg.instructions && cfg.instructions.redirect) || '';
+}
+
+async function validateProjectDomains() {
+    const panel = document.getElementById('dnsValidationResults');
+    if (panel) panel.textContent = 'Validating DNS records...';
+    const result = await api('POST', projectPath('/domain-validate'), {});
+    renderDomainValidation(result);
+}
+
+function renderAnalytics(data) {
+    const cards = document.getElementById('analyticsCards');
+    const table = document.getElementById('analyticsDailyTable');
+    if (!cards || !table) return;
+    if (!data || data.error) {
+        cards.innerHTML = '<div class="analytics-card"><div class="label">Error</div><div class="value">-</div></div>';
+        table.innerHTML = `<div class="empty">Unable to load analytics.</div>`;
+        return;
+    }
+    cards.innerHTML = `
+        <div class="analytics-card"><div class="label">Total Views (${data.windowDays}d)</div><div class="value">${data.totalViews || 0}</div></div>
+        <div class="analytics-card"><div class="label">Unique Visitors (${data.windowDays}d)</div><div class="value">${data.totalUniqueVisitors || 0}</div></div>
+        <div class="analytics-card"><div class="label">Subscribers</div><div class="value">${data.subscribers || 0}</div></div>
+        <div class="analytics-card"><div class="label">Incidents (30d)</div><div class="value">${data.recentIncidents || 0}</div></div>
+    `;
+    const rows = (data.daily || []).map(d =>
+        `<tr><td>${esc(d.date)}</td><td>${d.views || 0}</td><td>${d.uniqueVisitors || 0}</td></tr>`
+    ).join('');
+    table.innerHTML = `
+        <div class="table-wrap">
+            <table class="daily-analytics-table">
+                <thead><tr><th>Date</th><th>Views</th><th>Unique Visitors</th></tr></thead>
+                <tbody>${rows || '<tr><td colspan="3">No analytics data yet.</td></tr>'}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function loadAnalyticsData() {
+    const data = await api('GET', projectPath('/analytics?days=30'));
+    renderAnalytics(data);
+}
+
+function renderActivityLog(payload) {
+    const container = document.getElementById('activityLogList');
+    if (!container) return;
+    const items = payload && payload.items ? payload.items : [];
+    if (!items.length) {
+        container.innerHTML = `<div class="activity-item"><div class="activity-summary">No recent changes.</div><div class="activity-meta">Actions by admins/editors for this project will appear here.</div></div>`;
+        return;
+    }
+    container.innerHTML = items.map((item) => {
+        const user = item.user && item.user.username ? item.user.username : 'system';
+        const at = item.at ? new Date(item.at).toLocaleString() : '';
+        return `<div class="activity-item">
+            <div class="activity-summary">${esc(item.summary || item.action || 'Change')}</div>
+            <div class="activity-meta">${esc(user)} • ${esc(at)}</div>
+        </div>`;
+    }).join('');
+}
+
+async function loadActivityLog() {
+    const payload = await api('GET', projectPath('/activity?limit=50'));
+    renderActivityLog(payload);
+}
+
+async function loadSettings() {
+    const s = await api('GET', projectPath('/settings'));
+    initEmailLogoUpload();
+    document.getElementById('setOrganizationLegalName').value = s.organizationLegalName || s.companyName || '';
+    document.getElementById('setPageName').value = s.pageName || s.pageTitle || '';
+    document.getElementById('setPageTitle').value = s.pageTitle || '';
+    document.getElementById('setCompanyUrl').value = s.companyUrl || '';
+    document.getElementById('setSupportUrl').value = s.supportUrl || '';
+    document.getElementById('setPrivacyPolicyUrl').value = s.privacyPolicyUrl || '';
+    document.getElementById('setSmsCountryCode').value = s.defaultSmsCountryCode || '+1';
+    document.getElementById('setCustomDomain').value = s.customDomain || '';
+    document.getElementById('setRedirectDomains').value = Array.isArray(s.redirectDomains) ? s.redirectDomains.join('\n') : '';
+    document.getElementById('setGaTrackingId').value = s.googleAnalyticsTrackingId || '';
+    document.getElementById('setSupportEmail').value = s.supportEmail || '';
+    document.getElementById('setNotificationFromName').value = s.notificationFromName || s.organizationLegalName || '';
+    document.getElementById('setNotificationFromEmail').value = s.notificationFromEmail || '';
+    document.getElementById('setNotificationReplyToEmail').value = s.notificationReplyToEmail || '';
+    document.getElementById('setNotificationFooterMessage').value = s.notificationFooterMessage || '';
+    document.getElementById('setNotificationLogoUrl').value = s.notificationLogoUrl || '';
+    document.getElementById('setNotificationUseStatusLogo').checked = s.notificationUseStatusLogo !== false;
+    document.getElementById('setEffectiveNotificationFromEmail').value = s.effectiveNotificationFromEmail || s.notificationFromEmail || s.supportEmail || '';
+    renderEmailLogoPreview();
+    document.getElementById('setBrandColor').value = s.brandColor || '#0052cc';
+    document.getElementById('setAboutText').value = s.aboutText || '';
+    document.getElementById('setTimezone').value = s.timezone || 'UTC';
+    document.getElementById('setHideFromSearchEngines').checked = !!s.hideFromSearchEngines;
+    currentProjectCustomDomain = normalizeDomainInput(s.customDomain || '');
+    updateViewLink();
+    updatePublishUrlPreview();
+    await loadDomainConfig();
+    const viewSelect = document.getElementById('componentsView');
+    if (viewSelect) viewSelect.value = s.componentsView || 'list';
+    componentsDisplayMode = s.componentsView || 'list';
+    const uptimeSelect = document.getElementById('showUptime');
+    if (uptimeSelect) uptimeSelect.value = String(s.showUptime !== false);
+    disabledTabs = s.disabledTabs || {};
+    applyMenuVisibility();
+    showSettingsSubtab(activeSettingsSubtab);
+}
+
+document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!requireEdit()) return;
+    const saved = await api('PUT', projectPath('/settings'), {
+        organizationLegalName: document.getElementById('setOrganizationLegalName').value,
+        companyName: document.getElementById('setOrganizationLegalName').value,
+        pageName: document.getElementById('setPageName').value,
+        pageTitle: document.getElementById('setPageTitle').value,
+        companyUrl: document.getElementById('setCompanyUrl').value,
+        supportUrl: document.getElementById('setSupportUrl').value,
+        privacyPolicyUrl: document.getElementById('setPrivacyPolicyUrl').value,
+        defaultSmsCountryCode: document.getElementById('setSmsCountryCode').value,
+        notificationFromName: document.getElementById('setNotificationFromName').value,
+        notificationFromEmail: document.getElementById('setNotificationFromEmail').value,
+        notificationReplyToEmail: document.getElementById('setNotificationReplyToEmail').value,
+        notificationFooterMessage: document.getElementById('setNotificationFooterMessage').value,
+        notificationLogoUrl: document.getElementById('setNotificationLogoUrl').value,
+        notificationUseStatusLogo: document.getElementById('setNotificationUseStatusLogo').checked,
+        customDomain: normalizeDomainInput(document.getElementById('setCustomDomain').value),
+        redirectDomains: parseRedirectDomainsInput(document.getElementById('setRedirectDomains').value),
+        googleAnalyticsTrackingId: document.getElementById('setGaTrackingId').value,
+        hideFromSearchEngines: document.getElementById('setHideFromSearchEngines').checked,
+        supportEmail: document.getElementById('setSupportEmail').value,
+        brandColor: document.getElementById('setBrandColor').value,
+        aboutText: document.getElementById('setAboutText').value,
+        timezone: document.getElementById('setTimezone').value
+    });
+    if (saved && saved.error) {
+        toast(saved.error);
+        return;
+    }
+    currentProjectCustomDomain = normalizeDomainInput(saved && saved.customDomain ? saved.customDomain : '');
+    await loadProjectsList();
+    toast('Settings saved');
+    await loadSettings();
+    showSettingsSubtab(activeSettingsSubtab);
+});
+
+const customDomainField = document.getElementById('setCustomDomain');
+if (customDomainField) customDomainField.addEventListener('input', updatePublishUrlPreview);
+const useStatusLogoCheckbox = document.getElementById('setNotificationUseStatusLogo');
+if (useStatusLogoCheckbox) {
+    useStatusLogoCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked && !(document.getElementById('setNotificationLogoUrl').value || '').trim()) {
+            copyLogoFromStatusPage();
+        }
+    });
+}
+
+async function saveShowUptime() {
+    if (!requireEdit()) return;
+    const val = document.getElementById('showUptime').value === 'true';
+    await api('PUT', projectPath('/settings'), { showUptime: val });
+    toast('Uptime section updated');
+}
+
+function applyMenuVisibility() {
+    const map = disabledTabs || {};
+    document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
+        const tab = item.getAttribute('data-tab');
+        const hidden = !!map[tab];
+        item.style.display = hidden ? 'none' : '';
+        const tabPage = document.getElementById('tab-' + tab);
+        if (tabPage) tabPage.style.display = hidden ? 'none' : '';
+    });
+    document.getElementById('toggle-components').checked = !!map.components;
+    document.getElementById('toggle-incidents').checked = !!map.incidents;
+    document.getElementById('toggle-maintenance').checked = !!map.maintenance;
+    document.getElementById('toggle-subscribers').checked = !!map.subscribers;
+    document.getElementById('toggle-projects').checked = !!map.projects;
+    document.getElementById('toggle-users').checked = !!map.users;
+    document.getElementById('toggle-settings').checked = !!map.settings;
+    document.getElementById('toggle-platform').checked = !!map.platform;
+    const activeTab = document.querySelector('.tab-page.active');
+    if (activeTab && activeTab.style.display === 'none') showTab('dashboard');
+}
+
+async function saveMenuVisibility() {
+    if (!requireEdit()) return;
+    disabledTabs = {
+        components: document.getElementById('toggle-components').checked,
+        incidents: document.getElementById('toggle-incidents').checked,
+        maintenance: document.getElementById('toggle-maintenance').checked,
+        subscribers: document.getElementById('toggle-subscribers').checked,
+        projects: document.getElementById('toggle-projects').checked,
+        users: document.getElementById('toggle-users').checked,
+        settings: document.getElementById('toggle-settings').checked,
+        platform: document.getElementById('toggle-platform').checked
+    };
+    await api('PUT', projectPath('/settings'), { disabledTabs });
+    toast('Menu visibility saved');
+    applyMenuVisibility();
+}
+
+async function loadPlatformSettings() {
+    if (!isAdmin()) return;
+    const s = await api('GET', '/api/v1/admin/platform/settings');
+    if (!s || s.error) return;
+    document.getElementById('platTenantId').value = s.azureTenantId || '';
+    document.getElementById('platSubscriptionId').value = s.azureSubscriptionId || '';
+    document.getElementById('platResourceGroup').value = s.azureResourceGroup || '';
+    document.getElementById('platAppServiceName').value = s.azureAppServiceName || '';
+    document.getElementById('platStatusBaseDomain').value = s.azureStatusBaseDomain || '';
+    document.getElementById('platKeyVaultName').value = s.azureKeyVaultName || '';
+    document.getElementById('platAppInsightsName').value = s.azureAppInsightsName || '';
+    document.getElementById('platStorageAccountName').value = s.azureStorageAccountName || '';
+    document.getElementById('platCosmosAccountName').value = s.azureCosmosAccountName || '';
+    document.getElementById('platUseManagedIdentity').checked = s.useManagedIdentity !== false;
+    document.getElementById('platEnableKeyVaultRefs').checked = s.enableKeyVaultReferences !== false;
+}
+
+async function savePlatformSettings() {
+    if (!isAdmin()) { toast('Admin only'); return; }
+    const payload = {
+        azureTenantId: document.getElementById('platTenantId').value.trim(),
+        azureSubscriptionId: document.getElementById('platSubscriptionId').value.trim(),
+        azureResourceGroup: document.getElementById('platResourceGroup').value.trim(),
+        azureAppServiceName: document.getElementById('platAppServiceName').value.trim(),
+        azureStatusBaseDomain: document.getElementById('platStatusBaseDomain').value.trim(),
+        azureKeyVaultName: document.getElementById('platKeyVaultName').value.trim(),
+        azureAppInsightsName: document.getElementById('platAppInsightsName').value.trim(),
+        azureStorageAccountName: document.getElementById('platStorageAccountName').value.trim(),
+        azureCosmosAccountName: document.getElementById('platCosmosAccountName').value.trim(),
+        useManagedIdentity: document.getElementById('platUseManagedIdentity').checked,
+        enableKeyVaultReferences: document.getElementById('platEnableKeyVaultRefs').checked
+    };
+    const saved = await api('PUT', '/api/v1/admin/platform/settings', payload);
+    if (saved && saved.error) { toast(saved.error); return; }
+    toast('Platform settings saved');
+    await loadPlatformStatus();
+}
+
+async function loadPlatformStatus() {
+    if (!isAdmin()) return;
+    const status = await api('GET', '/api/v1/admin/platform/status');
+    const container = document.getElementById('platformStatusBody');
+    if (!container) return;
+    if (!status || status.error) {
+        container.innerHTML = '<div class="empty"><p>Unable to load runtime status.</p></div>';
+        return;
+    }
+    container.innerHTML = `
+        <div class="settings-grid">
+            <div class="form-group"><label>Running in Azure</label><input type="text" readonly value="${status.isAzure ? 'Yes' : 'No'}"></div>
+            <div class="form-group"><label>Site Name</label><input type="text" readonly value="${esc(status.websiteSiteName || '-')}"></div>
+            <div class="form-group"><label>Hostname</label><input type="text" readonly value="${esc(status.websiteHostname || '-')}"></div>
+            <div class="form-group"><label>Custom Domain Target</label><input type="text" readonly value="${esc(status.customDomainTarget || '-')}"></div>
+            <div class="form-group"><label>Key Vault Configured</label><input type="text" readonly value="${status.keyVaultConfigured ? 'Yes' : 'No'}"></div>
+            <div class="form-group"><label>App Insights Configured</label><input type="text" readonly value="${status.appInsightsConfigured ? 'Yes' : 'No'}"></div>
+            <div class="form-group"><label>Managed Identity</label><input type="text" readonly value="${status.managedIdentityConfigured ? 'Available' : 'Not detected'}"></div>
+            <div class="form-group"><label>Data Path</label><input type="text" readonly value="${esc(status.dataPersistencePath || '-')}"></div>
+            <div class="form-group"><label>Last Checked</label><input type="text" readonly value="${esc(new Date(status.lastCheckedAt).toLocaleString())}"></div>
+        </div>
+    `;
+}
+
+const platformSettingsForm = document.getElementById('platformSettingsForm');
+if (platformSettingsForm) {
+    platformSettingsForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await savePlatformSettings();
+    });
+}
+
+function applyRolePermissions() {
+    const usersNav = document.querySelector('.nav-item[data-tab="users"]');
+    if (usersNav) usersNav.style.display = isAdmin() ? '' : 'none';
+    const usersTab = document.getElementById('tab-users');
+    if (usersTab && !isAdmin()) usersTab.style.display = 'none';
+    const platformNav = document.querySelector('.nav-item[data-tab="platform"]');
+    if (platformNav) platformNav.style.display = isAdmin() ? '' : 'none';
+    const platformTab = document.getElementById('tab-platform');
+    if (platformTab && !isAdmin()) platformTab.style.display = 'none';
+
+    const editOnlyButtons = [
+        'qaIncidentBtn', 'qaMaintenanceBtn', 'qaComponentBtn',
+        'componentsAddBtn', 'incidentsAddBtn', 'maintenanceAddBtn', 'projectsAddBtn',
+        'settingsSaveBtn', 'menuSaveBtn', 'platformSaveBtn'
+    ];
+    editOnlyButtons.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (id === 'platformSaveBtn') el.style.display = isAdmin() ? '' : 'none';
+        else el.style.display = canEdit() ? '' : 'none';
+    });
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function statusLabel(s) {
+    const m = { operational: 'Operational', degraded_performance: 'Degraded', partial_outage: 'Partial Outage', major_outage: 'Major Outage', under_maintenance: 'Maintenance', investigating: 'Investigating', identified: 'Identified', monitoring: 'Monitoring', resolved: 'Resolved', scheduled: 'Scheduled', in_progress: 'In Progress', completed: 'Completed' };
+    return m[s] || s;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+async function init() {
+    let user = {};
+    try {
+        const me = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
+        if (!me.ok) {
+            window.location.href = '/login.html';
+            return;
+        }
+        user = await me.json();
+        localStorage.setItem('statusPageUser', JSON.stringify(user));
+    } catch {
+        window.location.href = '/login.html';
+        return;
+    }
+    if (user.username) {
+        document.getElementById('userName').textContent = user.username;
+        document.getElementById('userInitials').textContent = user.username.slice(0, 2).toUpperCase();
+    }
+    currentUserRole = user.role || 'viewer';
+    applyRolePermissions();
+    await loadProjectsList();
+    if (currentProjectId) await setCurrentProject(currentProjectId);
+}
+init();
+</script>
+</body>
+</html>

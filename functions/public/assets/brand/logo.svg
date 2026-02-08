@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" fill="none">
+  <rect x="0" y="4" width="32" height="32" rx="8" fill="#8738ff"/>
+  <path d="M10 24L16 14L22 24L26 18" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="44" y="26" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="18" fill="#121217" font-weight="700">Elite Status</text>
+</svg>

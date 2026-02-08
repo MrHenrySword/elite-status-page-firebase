@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3E Elite Status</title>
+    <link rel="icon" href="/assets/brand/Elite-Logo-01.png" type="image/png">
+    <link rel="apple-touch-icon" href="/assets/brand/Elite-Logo-01.png">
+    <meta property="og:title" content="3E Elite Status">
+    <meta property="og:description" content="Live status and uptime updates.">
+    <meta property="og:image" content="/assets/brand/Elite-Logo-01.png">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/brand/Elite-Logo-01.png">
+    <meta name="robots" content="index,follow" id="metaRobots">
+    <link rel="stylesheet" href="/theme.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:var(--surface);color:var(--text-primary);line-height:1.6;-webkit-font-smoothing:antialiased}
+        a{color:var(--brand-primary);text-decoration:none}a:hover{text-decoration:underline}
+
+        /* Header */
+        .header{background:#fff;border-bottom:1px solid var(--border);padding:24px 0}
+        .header-inner{max-width:var(--container-max);margin:0 auto;padding:0 20px;display:flex;justify-content:space-between;align-items:center}
+        .header-logo{font-size:18px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:16px}
+        .header-logo .brand-logo.full{height:86px}
+        .header-actions{display:flex;gap:12px;align-items:center}
+        .btn-subscribe{background:var(--brand-primary);color:#fff;border:none;padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,transform .15s}
+        .btn-subscribe:hover{background:var(--brand-primary-hover);transform:translateY(-1px)}
+        .btn-outline{background:#fff;color:var(--brand-primary);border:1px solid rgba(135,56,255,.35);padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+        .btn-outline:hover{background:var(--brand-primary);color:#fff}
+
+        /* Status banner */
+        .status-banner{padding:24px 20px}
+        .status-banner-inner{max-width:var(--container-max);margin:0 auto}
+        .status-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;border-radius:8px;padding:16px 20px;color:#fff;box-shadow:var(--shadow-card)}
+        .status-bar.operational{background:var(--brand-primary)}
+        .status-bar.degraded_performance{background:var(--warning)}
+        .status-bar.partial_outage{background:#e26b38}
+        .status-bar.major_outage{background:var(--error)}
+        .status-bar.under_maintenance{background:var(--brand-primary)}
+        .status-title{font-size:18px;font-weight:600;color:#fff;margin:0}
+        .status-subtitle{font-size:12px;color:rgba(255,255,255,.9);margin:0}
+
+        /* Container */
+        .container{max-width:var(--container-max);margin:0 auto;padding:0 20px 40px}
+
+        /* Component groups */
+        .component-group{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);margin-top:24px;overflow:hidden;box-shadow:var(--shadow-card)}
+        .group-collapsed .group-body{display:none}
+        .group-collapsed .group-chevron{transform:rotate(-90deg)}
+        .tree-toggle{display:inline-block;width:14px;color:var(--text-secondary);cursor:pointer}
+        .tree-children-hidden{display:none}
+        .group-header{padding:16px 20px;font-size:14px;font-weight:600;color:var(--text-primary);background:#fbfbfe;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+        .group-header:hover{background:#f4f5fb}
+        .group-chevron{transition:transform .2s;font-size:11px;color:var(--text-secondary)}
+        .group-chevron.collapsed{transform:rotate(-90deg)}
+        .group-body.collapsed{display:none}
+        .component-row{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f1f2f7;transition:background .1s}
+        .component-row:last-child{border-bottom:none}
+        .component-row:hover{background:#fafbff}
+        .component-name{font-size:14px;color:var(--text-primary);flex:1}
+        .component-status-label{font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px}
+        .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+        .status-dot.operational{background:var(--success)}
+        .status-dot.degraded_performance{background:var(--warning)}
+        .status-dot.partial_outage{background:#e26b38}
+        .status-dot.major_outage{background:var(--error)}
+        .status-dot.under_maintenance{background:var(--brand-primary)}
+        .status-text.operational{color:var(--success)}
+        .status-text.degraded_performance{color:var(--warning)}
+        .status-text.partial_outage{color:#e26b38}
+        .status-text.major_outage{color:var(--error)}
+        .status-text.under_maintenance{color:var(--brand-primary)}
+
+        .component-bars{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 20px;box-shadow:var(--shadow-card);margin-top:16px}
+        /* Bar chart components (disabled) */
+        /*
+        .component-bar-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+        .component-bar-row:last-child{margin-bottom:0}
+        .component-bar-name{min-width:160px;font-size:13px;font-weight:600;color:var(--text-primary)}
+        .component-bar-track{flex:1;height:10px;border-radius:999px;background:#f1f2f7;overflow:hidden;display:flex}
+        .component-bar-seg{height:100%}
+        .component-bar-seg.operational{background:var(--success)}
+        .component-bar-seg.degraded_performance{background:var(--warning)}
+        .component-bar-seg.partial_outage{background:#e26b38}
+        .component-bar-seg.major_outage{background:var(--error)}
+        .component-bar-seg.under_maintenance{background:var(--brand-primary)}
+        .component-bar-meta{font-size:12px;color:var(--text-secondary);white-space:nowrap}
+        */
+
+        /* Uptime section */
+        .uptime-section{margin-top:32px}
+        .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+        .section-title{font-size:16px;font-weight:600;color:var(--text-primary)}
+        .uptime-component{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:12px;padding:16px 20px;box-shadow:var(--shadow-soft)}
+        .uptime-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+        .uptime-name{font-size:14px;font-weight:600;color:var(--text-primary)}
+        .uptime-pct{font-size:13px;color:var(--text-secondary)}
+        .uptime-bars{display:flex;gap:1.5px;height:34px}
+        .uptime-bar{flex:1;border-radius:2px;cursor:pointer;transition:opacity .15s;position:relative}
+        .uptime-bar:hover{opacity:.75}
+        .uptime-bar.operational{background:var(--success)}
+        .uptime-bar.degraded_performance{background:var(--warning)}
+        .uptime-bar.major_outage{background:var(--error)}
+        .uptime-bar.no-data{background:#e6e8ef}
+        .uptime-legend{display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-top:6px}
+        .uptime-bar .tooltip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#253858;color:#fff;padding:6px 10px;border-radius:4px;font-size:11px;white-space:nowrap;z-index:10;pointer-events:none}
+        .uptime-bar .tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#253858}
+        .uptime-bar:hover .tooltip{display:block}
+
+        /* Incidents */
+        .incidents-section{margin-top:32px}
+        .incident-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:16px;overflow:hidden;box-shadow:var(--shadow-card)}
+        .incident-header{padding:18px 20px;border-bottom:1px solid #f4f5f7}
+        .incident-title{font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px}
+        .incident-impact{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:3px;margin-left:8px}
+        .incident-impact.minor{background:#fef3c7;color:#92400e}
+        .incident-impact.major{background:#fee2e2;color:#991b1b}
+        .incident-impact.critical{background:#fecaca;color:#7f1d1d}
+        .incident-meta{font-size:12px;color:var(--text-secondary)}
+        .incident-updates{padding:0 20px}
+        .incident-update{padding:14px 0;border-bottom:1px solid #f4f5f7;display:flex;gap:16px}
+        .incident-update:last-child{border-bottom:none}
+        .update-status{font-size:12px;font-weight:600;text-transform:uppercase;min-width:100px;padding-top:2px}
+        .update-status.investigating{color:var(--warning)}
+        .update-status.identified{color:#e26b38}
+        .update-status.monitoring{color:var(--brand-primary)}
+        .update-status.resolved{color:var(--success)}
+        .update-status.scheduled{color:var(--brand-primary)}
+        .update-status.in_progress{color:var(--warning)}
+        .update-status.completed{color:var(--success)}
+        .update-body{flex:1}
+        .update-message{font-size:13px;color:var(--text-primary);margin-bottom:4px}
+        .update-time{font-size:12px;color:var(--text-secondary)}
+
+        .no-incidents{text-align:center;padding:24px;color:var(--text-secondary);font-size:14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-md)}
+
+        /* Scheduled maintenance */
+        .maintenance-card{background:#f3efff;border:1px solid rgba(135,56,255,.2);border-radius:var(--radius-md);margin-bottom:16px;overflow:hidden}
+        .maintenance-card .incident-header{border-bottom:1px solid rgba(135,56,255,.2)}
+        .maintenance-badge{background:var(--brand-primary);color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:3px;margin-right:8px}
+
+        /* Incident history */
+        .history-section{margin-top:40px;border-top:1px solid var(--border);padding-top:24px}
+        .history-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid var(--border)}
+        .history-tab{padding:10px 20px;font-size:14px;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-weight:600;transition:all .15s}
+        .history-tab:hover{color:var(--text-primary)}
+        .history-tab.active{color:var(--brand-primary);border-bottom-color:var(--brand-primary)}
+        .history-day{margin-bottom:24px}
+        .history-date{font-size:13px;font-weight:600;color:var(--text-primary);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:12px}
+        .history-incident{padding:10px 0}
+        .history-incident-title{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:2px}
+        .history-incident-time{font-size:12px;color:var(--text-secondary)}
+        .history-no-incidents{font-size:13px;color:var(--text-secondary);padding:4px 0}
+
+        .about-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:20px;box-shadow:var(--shadow-card)}
+        .about-title{font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:8px}
+        .about-body{font-size:14px;color:var(--text-secondary);line-height:1.7}
+
+        /* Footer */
+        .footer{max-width:var(--container-max);margin:0 auto;padding:20px;text-align:center;border-top:1px solid var(--border)}
+        .footer .brand-logo.full{height:40px}
+        .footer-text{font-size:12px;color:var(--text-secondary)}
+        .footer-links{margin-top:8px;display:flex;gap:16px;justify-content:center}
+        .footer-links a{font-size:12px;color:var(--text-secondary)}
+        .footer-links a:hover{color:var(--brand-primary)}
+
+        /* Subscribe modal */
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+        .modal-overlay.show{display:flex}
+        .modal{background:#fff;border-radius:var(--radius-md);width:90%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden}
+        .modal-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+        .modal-head h3{font-size:18px;font-weight:600}
+        .modal-close{background:none;border:none;font-size:20px;color:var(--text-secondary);cursor:pointer;padding:4px}
+        .modal-body{padding:20px 24px}
+        .form-group{margin-bottom:16px}
+        .form-group label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-primary)}
+        .form-group input,.form-group select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;transition:border-color .15s}
+        .form-group input:focus,.form-group select:focus{outline:none;border-color:var(--brand-primary);box-shadow:0 0 0 2px rgba(135,56,255,.2)}
+        .form-group .help-text{font-size:11px;color:var(--text-secondary);margin-top:4px}
+        .modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+        .btn-cancel{background:#f7f8f9;color:var(--text-primary);border:1px solid var(--border);padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer}
+        .btn-cancel:hover{background:#ebecf0}
+
+        /* Loading */
+        .loading{text-align:center;padding:40px;color:var(--text-secondary)}
+        .spinner{display:inline-block;width:24px;height:24px;border:3px solid #e8ebef;border-top-color:var(--brand-primary);border-radius:50%;animation:spin .6s linear infinite;margin-bottom:8px}
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        /* Responsive */
+        @media(max-width:768px){
+            .header-inner{flex-direction:column;gap:12px}
+            .header-actions{width:100%;justify-content:flex-start}
+            .container{padding:0 16px 32px}
+            .component-row{flex-direction:column;align-items:flex-start;gap:8px}
+            .component-status-label{align-self:flex-end}
+            .incident-update{flex-direction:column}
+            .update-status{min-width:auto}
+        }
+        @media(max-width:600px){
+            .header-logo .brand-logo.full{height:68px}
+            .uptime-bars{height:24px}
+            .status-bar{flex-direction:column;align-items:flex-start}
+            .history-tabs{flex-wrap:wrap}
+        }
+    </style>
+</head>
+<body>
+
+<header class="header app-header">
+    <div class="header-inner">
+        <div class="header-logo brand" id="pageLogo">
+            <img class="brand-logo full" src="/assets/brand/Elite-Logo-01.png" alt="Elite Status">
+            <span id="pageTitle">3E Elite Status</span>
+        </div>
+        <div class="header-actions">
+            <button class="btn-subscribe" onclick="openSubscribeModal()">Subscribe to Updates</button>
+        </div>
+    </div>
+</header>
+
+<div class="status-banner status-hero" id="statusBanner">
+    <div class="status-banner-inner">
+        <div class="status-bar operational" id="statusBar">
+            <h1 class="status-title" id="statusTitle">All Systems Operational</h1>
+            <p class="status-subtitle" id="statusSubtitle">As of <span id="statusTime"></span></p>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <section class="section" id="aboutSection" style="display:none">
+        <div class="about-card">
+            <div class="about-title">About This Site</div>
+            <div class="about-body" id="aboutBody"></div>
+        </div>
+    </section>
+    <section class="section">
+        <div id="componentsContainer">
+            <div class="loading"><div class="spinner"></div><br>Loading components...</div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div id="maintenanceContainer"></div>
+    </section>
+
+    <section class="section">
+        <div id="activeIncidentsContainer"></div>
+    </section>
+
+    <!--
+    <section class="section uptime-section" id="uptimeSection">
+        <div class="section-header">
+            <div class="section-title">Uptime over the past 90 days</div>
+        </div>
+        <div id="uptimeContainer"></div>
+    </section>
+    -->
+
+    <section class="section history-section">
+        <div class="section-header">
+            <div class="section-title">Past Incidents</div>
+        </div>
+        <div class="history-tabs">
+            <div class="history-tab active" onclick="showHistory(7)">7 Days</div>
+            <div class="history-tab" onclick="showHistory(14)">14 Days</div>
+            <div class="history-tab" onclick="showHistory(30)">30 Days</div>
+        </div>
+        <div id="historyContainer"></div>
+    </section>
+</div>
+
+<footer class="app-footer">
+    <div class="footer-inner">
+        <div class="brand">
+            <img class="brand-logo full" src="/assets/brand/Elite-Logo-01.png" alt="Elite Status">
+        </div>
+        <div class="footer-links">
+            <a href="/admin.html">Admin</a>
+            <a href="/">Status Home</a>
+        </div>
+        <div class="footer-text">Powered by <strong>3E Elite StatusPage</strong></div>
+    </div>
+</footer>
+
+<!-- Subscribe Modal -->
+<div class="modal-overlay" id="subscribeModal">
+    <div class="modal">
+        <div class="modal-head">
+            <h3>Subscribe to Updates</h3>
+            <button class="modal-close" onclick="closeSubscribeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:13px;color:#7a869a;margin-bottom:16px">Get notified when components change status. We'll only send relevant updates.</p>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="subscribeEmail" placeholder="you@example.com">
+            </div>
+            <div id="subscribeMsg" style="font-size:13px;margin-bottom:8px"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeSubscribeModal()">Cancel</button>
+            <button class="btn-subscribe" onclick="subscribe()">Subscribe</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Resolve project slug from URL: /p/:slug or fallback to first project
+let PROJECT_SLUG = '';
+let API_BASE = '';
+const pathMatch = window.location.pathname.match(/^\/p\/([^/]+)/);
+if (pathMatch) PROJECT_SLUG = pathMatch[1];
+
+async function resolveProject() {
+    if (PROJECT_SLUG) {
+        API_BASE = '/api/v1/projects/' + PROJECT_SLUG;
+        return;
+    }
+    try {
+        const ctxRes = await fetch('/api/v1/project-context');
+        const ctxType = ctxRes.headers.get('content-type') || '';
+        if (ctxType.includes('application/json')) {
+            const ctx = await ctxRes.json();
+            if (ctx && ctx.slug) {
+                PROJECT_SLUG = ctx.slug;
+                API_BASE = '/api/v1/projects/' + PROJECT_SLUG;
+                if (ctx.source !== 'host' && (window.location.pathname === '/' || window.location.pathname === '/index.html')) {
+                    history.replaceState(null, '', '/p/' + PROJECT_SLUG);
+                }
+                return;
+            }
+        }
+    } catch (e) {}
+    try {
+        const res = await fetch('/api/v1/projects');
+        const type = res.headers.get('content-type') || '';
+        if (!type.includes('application/json')) {
+            if (window.location.port !== '3000') {
+                const retry = await fetch('http://localhost:3000/api/v1/projects');
+                const retryType = retry.headers.get('content-type') || '';
+                if (retryType.includes('application/json')) {
+                    const list = await retry.json();
+                    if (!list || list.length === 0) return;
+                    PROJECT_SLUG = list[0].slug;
+                    API_BASE = 'http://localhost:3000/api/v1/projects/' + PROJECT_SLUG;
+                    if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+                        history.replaceState(null, '', '/p/' + PROJECT_SLUG);
+                    }
+                    return;
+                }
+            }
+            throw new Error('Non-JSON response');
+        }
+        const list = await res.json();
+        if (!list || list.length === 0) return;
+        PROJECT_SLUG = list[0].slug;
+        API_BASE = '/api/v1/projects/' + PROJECT_SLUG;
+        if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+            history.replaceState(null, '', '/p/' + PROJECT_SLUG);
+        }
+    } catch (e) {}
+}
+const STATUS_LABELS = {
+    operational: 'Operational',
+    degraded_performance: 'Degraded Performance',
+    partial_outage: 'Partial Outage',
+    major_outage: 'Major Outage',
+    under_maintenance: 'Under Maintenance'
+};
+const INCIDENT_LABELS = {
+    investigating: 'Investigating',
+    identified: 'Identified',
+    monitoring: 'Monitoring',
+    resolved: 'Resolved',
+    scheduled: 'Scheduled',
+    in_progress: 'In Progress',
+    verifying: 'Verifying',
+    completed: 'Completed',
+    postmortem: 'Postmortem'
+};
+
+async function fetchJSON(url) {
+    const full = API_BASE ? API_BASE + url : url;
+    const r = await fetch(full);
+    return r.json();
+}
+
+function timeAgo(dateStr) {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + ' minutes ago';
+    if (diff < 86400) return Math.floor(diff/3600) + ' hours ago';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDate(dateStr) {
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+}
+
+function formatDay(dateStr) {
+    return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+// ── Load status ──────────────────────────────────────────────────────────
+async function loadStatus() {
+    const status = await fetchJSON('/status');
+    const banner = document.getElementById('statusBanner');
+    const bar = document.getElementById('statusBar');
+    const title = document.getElementById('statusTitle');
+
+    banner.className = 'status-banner';
+    bar.className = 'status-bar ' + status.status;
+    document.getElementById('statusTime').textContent = formatDate(status.updatedAt);
+
+    const titles = {
+        operational: 'All Systems Operational',
+        degraded_performance: 'Degraded System Performance',
+        partial_outage: 'Partial System Outage',
+        major_outage: 'Major System Outage',
+        under_maintenance: 'System Under Maintenance'
+    };
+    title.textContent = titles[status.status] || 'All Systems Operational';
+}
+
+// ── Load settings ────────────────────────────────────────────────────────
+let SETTINGS = {};
+let loadedGaTrackingId = '';
+
+function applyGoogleAnalytics(trackingId) {
+    const id = (trackingId || '').trim();
+    if (!id || id === loadedGaTrackingId) return;
+    loadedGaTrackingId = id;
+    if (!window.dataLayer) window.dataLayer = [];
+    window.gtag = window.gtag || function(){ dataLayer.push(arguments); };
+    const existing = document.getElementById('gaScript');
+    if (!existing) {
+        const s = document.createElement('script');
+        s.id = 'gaScript';
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(id);
+        document.head.appendChild(s);
+    }
+    window.gtag('js', new Date());
+    window.gtag('config', id);
+}
+
+async function loadSettings() {
+    try {
+        const s = await fetchJSON('/settings');
+        SETTINGS = s || {};
+        const displayTitle = s.pageTitle || s.pageName;
+        if (displayTitle) {
+            document.getElementById('pageTitle').textContent = displayTitle;
+            document.title = displayTitle;
+        }
+        const robots = document.getElementById('metaRobots');
+        if (robots) robots.setAttribute('content', s.hideFromSearchEngines ? 'noindex,nofollow' : 'index,follow');
+        if (s.googleAnalyticsTrackingId) applyGoogleAnalytics(s.googleAnalyticsTrackingId);
+        const aboutSection = document.getElementById('aboutSection');
+        const aboutBody = document.getElementById('aboutBody');
+        if (s.aboutText) {
+            aboutBody.innerHTML = esc(s.aboutText).replace(/\n/g, '<br>');
+            aboutSection.style.display = 'block';
+        } else {
+            aboutSection.style.display = 'none';
+        }
+        const uptimeSection = document.getElementById('uptimeSection');
+        if (uptimeSection) {
+            const showUptime = s.showUptime !== false;
+            uptimeSection.style.display = (showUptime && s.componentsView !== 'bars') ? 'block' : 'none';
+        }
+    } catch(e) {}
+}
+
+// ── Load components ──────────────────────────────────────────────────────
+async function loadComponents() {
+    const data = await fetchJSON('/components');
+    const container = document.getElementById('componentsContainer');
+    const viewMode = (SETTINGS && SETTINGS.componentsView) ? SETTINGS.componentsView : 'list';
+    if (viewMode === 'hidden') { container.innerHTML = ''; return; }
+    let html = '';
+    let list = data.components;
+    if (!list && (data.groups || data.ungrouped)) {
+        list = [];
+        for (const g of data.groups || []) list.push(...(g.components || []));
+        if (data.ungrouped) list.push(...data.ungrouped);
+    }
+    const roots = buildTree(list || []);
+    if (!roots.length) { container.innerHTML = '<div class="no-incidents">No components available.</div>'; return; }
+    html += `<div class="component-group"><div class="group-body">${roots.map(n => treeRow(n, 0)).join('')}</div></div>`;
+    container.innerHTML = html;
+}
+
+// function renderComponentBars(data) {
+//     const rows = [];
+//     const groups = data.groups || [];
+//     for (const group of groups) {
+//         const comps = (group.components || []).filter(c => (c.view || 'list') === 'bars');
+//         if (comps.length === 0) continue;
+//         rows.push(componentBarRow(group.name, comps));
+//     }
+//     if (data.ungrouped && data.ungrouped.length) {
+//         const ungrouped = data.ungrouped.filter(c => (c.view || 'list') === 'bars');
+//         if (ungrouped.length) rows.push(componentBarRow('Ungrouped', ungrouped));
+//     }
+//     if (!rows.length) return '<div class="no-incidents">No components available.</div>';
+//     return `<div class="component-bars">${rows.join('')}</div>`;
+// }
+
+function componentBarRow(label, components) {
+    const counts = { operational: 0, degraded_performance: 0, partial_outage: 0, major_outage: 0, under_maintenance: 0 };
+    for (const c of components) counts[c.status] = (counts[c.status] || 0) + 1;
+    const total = components.length || 1;
+    const seg = (key) => counts[key] ? `<span class="component-bar-seg ${key}" style="width:${(counts[key]/total)*100}%"></span>` : '';
+    const meta = `${counts.operational}/${total} operational`;
+    return `<div class="component-bar-row">
+        <div class="component-bar-name">${esc(label)}</div>
+        <div class="component-bar-track">${seg('operational')}${seg('degraded_performance')}${seg('partial_outage')}${seg('major_outage')}${seg('under_maintenance')}</div>
+        <div class="component-bar-meta">${meta}</div>
+    </div>`;
+}
+
+function componentRow(c) {
+    return `<div class="component-row">
+        <span class="component-name">${esc(c.name)}</span>
+        <span class="component-status-label">
+            <span class="status-text ${c.status}">${STATUS_LABELS[c.status] || c.status}</span>
+            <span class="status-dot ${c.status}"></span>
+        </span>
+    </div>`;
+}
+
+// function toggleGroup(el) {
+//     const body = el.nextElementSibling;
+//     const chevron = el.querySelector('.group-chevron');
+//     body.classList.toggle('collapsed');
+//     chevron.classList.toggle('collapsed');
+// }
+
+function buildTree(list) {
+    const map = new Map();
+    for (const c of list) map.set(c.id, { ...c, children: [] });
+    const roots = [];
+    for (const c of map.values()) {
+        if (c.parentId && map.has(c.parentId)) map.get(c.parentId).children.push(c);
+        else roots.push(c);
+    }
+    const sortTree = (nodes) => {
+        nodes.sort((a, b) => (a.order || 0) - (b.order || 0));
+        for (const n of nodes) {
+            if (n.children && n.children.length) sortTree(n.children);
+        }
+    };
+    sortTree(roots);
+    return roots;
+}
+
+let expandedNodes = new Set();
+function treeRow(node, depth) {
+    const indent = depth * 18;
+    const hasChildren = node.children && node.children.length;
+    const expanded = expandedNodes.has(node.id);
+    const toggle = hasChildren ? `<span class="tree-toggle" onclick="toggleNode(${node.id});event.stopPropagation()">${expanded ? '&#9660;' : '&#9654;'}</span>` : '<span class="tree-toggle"></span>';
+    return `<div class="component-row">
+        <span class="component-name" style="padding-left:${indent}px">
+            ${toggle}${esc(node.name)}
+        </span>
+        <span class="component-status-label">
+            <span class="status-text ${node.status}">${STATUS_LABELS[node.status] || node.status}</span>
+            <span class="status-dot ${node.status}"></span>
+        </span>
+    </div>
+    ${hasChildren ? `<div class="${expanded ? '' : 'tree-children-hidden'}">${node.children.map(c => treeRow(c, depth + 1)).join('')}</div>` : ''}`;
+}
+
+function toggleNode(id) {
+    if (expandedNodes.has(id)) expandedNodes.delete(id);
+    else expandedNodes.add(id);
+    loadComponents();
+}
+
+// ── Load uptime ──────────────────────────────────────────────────────────
+async function loadUptime() {
+    const [uptimeData, compData] = await Promise.all([
+        fetchJSON('/uptime'),
+        fetchJSON('/components')
+    ]);
+
+    const allComponents = [];
+    for (const g of compData.groups) allComponents.push(...g.components);
+    if (compData.ungrouped) allComponents.push(...compData.ungrouped);
+
+    const container = document.getElementById('uptimeContainer');
+    let html = '';
+
+    for (const comp of allComponents) {
+        const days = uptimeData[comp.id] || {};
+        const sortedDates = [];
+        const now = Date.now();
+        for (let i = 89; i >= 0; i--) {
+            sortedDates.push(new Date(now - i * 86400000).toISOString().slice(0, 10));
+        }
+        const totalDays = sortedDates.length;
+        const opDays = sortedDates.filter(d => (days[d] || 'operational') === 'operational').length;
+        const pct = ((opDays / totalDays) * 100).toFixed(2);
+
+        let bars = '';
+        for (const d of sortedDates) {
+            const s = days[d] || 'no-data';
+            const label = s === 'no-data' ? 'No data' : STATUS_LABELS[s] || s;
+            bars += `<div class="uptime-bar ${s}"><div class="tooltip">${d}<br>${label}</div></div>`;
+        }
+
+        html += `<div class="uptime-component">
+            <div class="uptime-header">
+                <span class="uptime-name">${esc(comp.name)}</span>
+                <span class="uptime-pct">${pct}% uptime</span>
+            </div>
+            <div class="uptime-bars">${bars}</div>
+            <div class="uptime-legend"><span>90 days ago</span><span>Today</span></div>
+        </div>`;
+    }
+
+    container.innerHTML = html;
+}
+
+// ── Load incidents ───────────────────────────────────────────────────────
+async function loadActiveIncidents() {
+    const incidents = await fetchJSON('/incidents?status=active');
+    const container = document.getElementById('activeIncidentsContainer');
+
+    if (incidents.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '<div class="incidents-section"><div class="section-header"><div class="section-title">Active Incidents</div></div>';
+    for (const inc of incidents) {
+        html += incidentCard(inc);
+    }
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function incidentCard(inc) {
+    let updates = '';
+    const sorted = [...(inc.updates || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    for (const u of sorted) {
+        updates += `<div class="incident-update">
+            <div class="update-status ${u.status}">${INCIDENT_LABELS[u.status] || u.status}</div>
+            <div class="update-body">
+                <div class="update-message">${esc(u.message)}</div>
+                <div class="update-time">${formatDate(u.createdAt)}</div>
+            </div>
+        </div>`;
+    }
+    return `<div class="incident-card">
+        <div class="incident-header">
+            <div class="incident-title">${esc(inc.title)}<span class="incident-impact ${inc.impact || 'minor'}">${inc.impact || 'minor'}</span></div>
+            <div class="incident-meta">Started ${formatDate(inc.createdAt)}</div>
+        </div>
+        <div class="incident-updates">${updates}</div>
+    </div>`;
+}
+
+// ── Load scheduled maintenances ──────────────────────────────────────────
+async function loadMaintenances() {
+    const list = await fetchJSON('/scheduled-maintenances');
+    const container = document.getElementById('maintenanceContainer');
+
+    if (list.length === 0) { container.innerHTML = ''; return; }
+
+    let html = '<div class="incidents-section" style="margin-top:24px"><div class="section-header"><div class="section-title">Scheduled Maintenance</div></div>';
+    for (const m of list) {
+        let updates = '';
+        const sorted = [...(m.updates || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        for (const u of sorted) {
+            updates += `<div class="incident-update">
+                <div class="update-status ${u.status}">${INCIDENT_LABELS[u.status] || u.status}</div>
+                <div class="update-body">
+                    <div class="update-message">${esc(u.message)}</div>
+                    <div class="update-time">${formatDate(u.createdAt)}</div>
+                </div>
+            </div>`;
+        }
+        html += `<div class="maintenance-card">
+            <div class="incident-header">
+                <div class="incident-title"><span class="maintenance-badge">MAINTENANCE</span>${esc(m.title)}</div>
+                <div class="incident-meta">Scheduled ${formatDate(m.scheduledStart)} - ${formatDate(m.scheduledEnd)}</div>
+            </div>
+            <div class="incident-updates">${updates}</div>
+        </div>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// ── Incident history ─────────────────────────────────────────────────────
+let cachedIncidents = [];
+async function loadAllIncidents() {
+    cachedIncidents = await fetchJSON('/incidents');
+}
+
+function showHistory(days) {
+    document.querySelectorAll('.history-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    renderHistory(days);
+}
+
+function renderHistory(days) {
+    const container = document.getElementById('historyContainer');
+    let html = '';
+    const now = new Date();
+
+    for (let i = 0; i < days; i++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().slice(0, 10);
+        const dayLabel = formatDay(dateStr + 'T12:00:00');
+
+        const dayIncidents = cachedIncidents.filter(inc => {
+            const incDate = new Date(inc.createdAt).toISOString().slice(0, 10);
+            return incDate === dateStr;
+        });
+
+        html += `<div class="history-day"><div class="history-date">${dayLabel}</div>`;
+        if (dayIncidents.length === 0) {
+            html += '<div class="history-no-incidents">No incidents reported.</div>';
+        } else {
+            for (const inc of dayIncidents) {
+                const lastUpdate = inc.updates && inc.updates.length ? inc.updates[inc.updates.length - 1] : null;
+                html += `<div class="history-incident">
+                    <div class="history-incident-title">
+                        <span class="status-dot ${inc.status}" style="display:inline-block;width:8px;height:8px;margin-right:6px;vertical-align:middle"></span>
+                        ${esc(inc.title)} - <em>${INCIDENT_LABELS[inc.status] || inc.status}</em>
+                    </div>
+                    ${lastUpdate ? '<div class="history-incident-time">' + esc(lastUpdate.message) + '</div>' : ''}
+                </div>`;
+            }
+        }
+        html += '</div>';
+    }
+    container.innerHTML = html;
+}
+
+// ── Subscribe ────────────────────────────────────────────────────────────
+function openSubscribeModal() { document.getElementById('subscribeModal').classList.add('show'); }
+function closeSubscribeModal() { document.getElementById('subscribeModal').classList.remove('show'); document.getElementById('subscribeMsg').textContent = ''; }
+
+async function subscribe() {
+    const email = document.getElementById('subscribeEmail').value.trim();
+    const msg = document.getElementById('subscribeMsg');
+    if (!email || !email.includes('@')) { msg.style.color = '#dc3545'; msg.textContent = 'Please enter a valid email.'; return; }
+    try {
+        const r = await fetch(API_BASE + '/subscribers', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await r.json();
+        if (r.ok) { msg.style.color = '#3bd671'; msg.textContent = 'Subscribed successfully!'; document.getElementById('subscribeEmail').value = ''; }
+        else { msg.style.color = '#dc3545'; msg.textContent = data.error || 'Failed to subscribe'; }
+    } catch(e) { msg.style.color = '#dc3545'; msg.textContent = 'Network error'; }
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ── Init ─────────────────────────────────────────────────────────────────
+async function init() {
+    await resolveProject();
+    await loadSettings();
+    await Promise.all([loadStatus(), loadComponents(), loadActiveIncidents(), loadMaintenances(), /* loadUptime(), */ loadAllIncidents()]);
+    renderHistory(7);
+    // Auto-refresh every 60s
+    setInterval(async () => {
+        await Promise.all([loadStatus(), loadComponents(), loadActiveIncidents(), loadMaintenances()]);
+    }, 60000);
+}
+
+init();
+</script>
+</body>
+</html>
