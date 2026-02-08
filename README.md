@@ -5,14 +5,17 @@ Your original project stays unchanged.
 
 ## Architecture in this copy
 
-- Hosting rewrites all traffic to one Cloud Function: `api`
-- The Function runs your Express server from `functions/server.js`
+- Hosting serves static files directly from `functions/public` (no Function call for page/assets)
+- Hosting rewrites only `/api/**` and `/health` to one Cloud Function: `api`
+- The Function runs your Express server from `functions/server.js` for auth/admin/mutations
 - Server state is persisted to Firestore collections:
   - `status_meta/main` (platform settings, nextId, migration metadata)
   - `status_users/{id}`
   - `status_projects/{id}`
+  - `status_public_projects/{id}` (sanitized client-readable projection for public status page)
   - `status_audit/{autoId}`
-- Local `data.json`/`audit.log` are only runtime cache files in the Function environment.
+- Public status page reads from Firestore directly when available and falls back to one API snapshot endpoint.
+- Local `data.json`/`audit.log` are runtime cache files in the Function environment.
 
 This keeps your existing server logic while giving you Firestore-backed persistence for deploy.
 
@@ -67,5 +70,5 @@ After deploy, open your Hosting URL.
 ## Notes
 
 1. This copy now uses Firestore collections (not a single document).
-2. `server.js` is still your original app logic; persistence is adapted in `functions/index.js`.
-3. For very large workloads, you can further normalize project internals (components/incidents/maintenances) into dedicated subcollections.
+2. `server.js` remains the API/auth runtime; `functions/public/status-app.js` now does most public status processing client-side.
+3. `functions/index.js` keeps private collections synced and also writes `status_public_projects` for low-cost public reads.

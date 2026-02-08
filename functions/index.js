@@ -17,6 +17,7 @@ const firestoreSyncEnabled = Boolean(
 const COL_META = 'status_meta';
 const COL_USERS = 'status_users';
 const COL_PROJECTS = 'status_projects';
+const COL_PUBLIC_PROJECTS = 'status_public_projects';
 const COL_AUDIT = 'status_audit';
 const META_DOC_ID = 'main';
 
@@ -53,6 +54,112 @@ function parseAuditLines(text) {
 
 function byNumericId(a, b) {
 	return (Number(a.id) || 0) - (Number(b.id) || 0);
+}
+
+function normalizeDomain(value) {
+	if (!value || typeof value !== 'string') return '';
+	let input = value.trim().toLowerCase();
+	if (!input) return '';
+	if (!input.includes('://')) input = 'http://' + input;
+	try {
+		return new URL(input).hostname.toLowerCase().replace(/\.+$/, '');
+	} catch {
+		return '';
+	}
+}
+
+function splitDomainInput(value) {
+	const raw = Array.isArray(value) ? value.join(',') : String(value || '');
+	return raw.split(/[\s,]+/).map((v) => v.trim()).filter(Boolean);
+}
+
+function normalizeDomainList(value) {
+	const parts = splitDomainInput(value).map(normalizeDomain).filter(Boolean);
+	return [...new Set(parts)];
+}
+
+function sortByOrderThenId(a, b) {
+	const aOrder = Number.isFinite(Number(a && a.order)) ? Number(a.order) : Number.MAX_SAFE_INTEGER;
+	const bOrder = Number.isFinite(Number(b && b.order)) ? Number(b.order) : Number.MAX_SAFE_INTEGER;
+	if (aOrder !== bOrder) return aOrder - bOrder;
+	return (Number(a && a.id) || 0) - (Number(b && b.id) || 0);
+}
+
+function normalizePublicSettings(input) {
+	const settings = input && typeof input === 'object' ? input : {};
+	const customDomain = normalizeDomain(settings.customDomain || '');
+	const redirectDomains = normalizeDomainList(settings.redirectDomains || []).filter((d) => d !== customDomain);
+
+	return {
+		pageTitle: settings.pageTitle || '',
+		pageName: settings.pageName || '',
+		organizationLegalName: settings.organizationLegalName || '',
+		companyName: settings.companyName || '',
+		companyUrl: settings.companyUrl || '',
+		supportUrl: settings.supportUrl || '',
+		privacyPolicyUrl: settings.privacyPolicyUrl || '',
+		defaultSmsCountryCode: settings.defaultSmsCountryCode || '+1',
+		timezone: settings.timezone || 'UTC',
+		googleAnalyticsTrackingId: settings.googleAnalyticsTrackingId || '',
+		hideFromSearchEngines: !!settings.hideFromSearchEngines,
+		brandColor: settings.brandColor || '#0052cc',
+		aboutText: settings.aboutText || '',
+		componentsView: settings.componentsView || 'list',
+		showUptime: settings.showUptime !== false,
+		disabledTabs: (settings.disabledTabs && typeof settings.disabledTabs === 'object') ? settings.disabledTabs : {},
+		customDomain,
+		redirectDomains
+	};
+}
+
+function sanitizePublicProject(project) {
+	const safe = project && typeof project === 'object' ? project : {};
+	const settings = normalizePublicSettings(safe.settings);
+	const nowIso = new Date().toISOString();
+
+	const components = Array.isArray(safe.components)
+		? safe.components.map((c) => ({
+			id: c.id,
+			parentId: c.parentId || null,
+			name: c.name || '',
+			description: c.description || '',
+			status: c.status || 'operational',
+			order: Number.isFinite(Number(c.order)) ? Number(c.order) : 0,
+			showUptime: c.showUptime !== false,
+			createdAt: c.createdAt || nowIso
+		})).sort(sortByOrderThenId)
+		: [];
+
+	const incidents = Array.isArray(safe.incidents)
+		? safe.incidents.map((incident) => ({
+			...incident,
+			updates: Array.isArray(incident.updates) ? incident.updates : []
+		})).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+		: [];
+
+	const scheduledMaintenances = Array.isArray(safe.scheduledMaintenances)
+		? safe.scheduledMaintenances.map((maintenance) => ({
+			...maintenance,
+			updates: Array.isArray(maintenance.updates) ? maintenance.updates : []
+		})).sort((a, b) => new Date(a.scheduledStart || 0) - new Date(b.scheduledStart || 0))
+		: [];
+
+	const uptimeData = safe.uptimeData && typeof safe.uptimeData === 'object' ? safe.uptimeData : {};
+
+	return {
+		id: safe.id,
+		name: safe.name || '',
+		slug: safe.slug || '',
+		customDomain: settings.customDomain,
+		redirectDomains: settings.redirectDomains,
+		settings,
+		components,
+		incidents,
+		scheduledMaintenances,
+		uptimeData,
+		updatedAt: nowIso,
+		schemaVersion: 1
+	};
 }
 
 async function commitOps(ops) {
@@ -102,6 +209,7 @@ async function persistDataToCollections(data) {
 	await firestore.collection(COL_META).doc(META_DOC_ID).set(metaPayload, { merge: false });
 	await upsertCollectionById(COL_USERS, users);
 	await upsertCollectionById(COL_PROJECTS, projects);
+	await upsertCollectionById(COL_PUBLIC_PROJECTS, projects.map(sanitizePublicProject));
 }
 
 async function loadDataFromCollections() {
@@ -190,8 +298,30 @@ async function hydrateLocalFilesFromFirestore() {
 	}
 }
 
+async function bootstrapFirestoreCollectionsIfNeeded() {
+	if (!firestoreSyncEnabled) return;
+
+	try {
+		const [metaSnap, publicSnap] = await Promise.all([
+			firestore.collection(COL_META).doc(META_DOC_ID).get(),
+			firestore.collection(COL_PUBLIC_PROJECTS).limit(1).get()
+		]);
+
+		// If core data and public projections are already present, skip bootstrap writes.
+		if (metaSnap.exists && !publicSnap.empty) return;
+
+		if (!fs.existsSync(DATA_FILE)) return;
+		const parsed = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+		await persistDataToCollections(parsed);
+		logger.info('Bootstrapped Firestore collections from local data.json.');
+	} catch (err) {
+		logger.warn('Unable to bootstrap Firestore collections from local data.', err.message);
+	}
+}
+
 const appPromise = (async () => {
 	await hydrateLocalFilesFromFirestore();
+	await bootstrapFirestoreCollectionsIfNeeded();
 	patchFsForFirestoreSync();
 	return require('./server');
 })();

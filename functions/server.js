@@ -593,6 +593,72 @@ function nextId() { db.nextId = (db.nextId || 2000) + 1; return db.nextId; }
 function getProjectBySlug(slug) { return db.projects.find(p => p.slug === slug); }
 function getProjectById(id) { return db.projects.find(p => p.id === parseInt(id)); }
 
+function computeOverallStatus(components) {
+	let overall = 'operational';
+	const list = Array.isArray(components) ? components : [];
+	if (list.some((c) => c.status === 'major_outage')) overall = 'major_outage';
+	else if (list.some((c) => c.status === 'partial_outage')) overall = 'partial_outage';
+	else if (list.some((c) => c.status === 'degraded_performance')) overall = 'degraded_performance';
+	else if (list.some((c) => c.status === 'under_maintenance')) overall = 'under_maintenance';
+	return overall;
+}
+
+function getPublicProjectSettings(project) {
+	const settings = (project && project.settings && typeof project.settings === 'object') ? project.settings : {};
+	return {
+		pageTitle: settings.pageTitle || '',
+		pageName: settings.pageName || '',
+		organizationLegalName: settings.organizationLegalName || '',
+		companyName: settings.companyName || '',
+		companyUrl: settings.companyUrl || '',
+		supportUrl: settings.supportUrl || '',
+		privacyPolicyUrl: settings.privacyPolicyUrl || '',
+		notificationFromName: settings.notificationFromName || '',
+		notificationFromEmail: settings.notificationFromEmail || '',
+		notificationReplyToEmail: settings.notificationReplyToEmail || '',
+		notificationFooterMessage: settings.notificationFooterMessage || '',
+		notificationLogoUrl: settings.notificationLogoUrl || '',
+		notificationUseStatusLogo: settings.notificationUseStatusLogo !== false,
+		defaultSmsCountryCode: settings.defaultSmsCountryCode || '+1',
+		timezone: settings.timezone || 'UTC',
+		googleAnalyticsTrackingId: settings.googleAnalyticsTrackingId || '',
+		hideFromSearchEngines: !!settings.hideFromSearchEngines,
+		brandColor: settings.brandColor || '#0052cc',
+		aboutText: settings.aboutText || '',
+		componentsView: settings.componentsView || 'list',
+		showUptime: settings.showUptime !== false,
+		disabledTabs: (settings.disabledTabs && typeof settings.disabledTabs === 'object') ? settings.disabledTabs : {},
+		customDomain: normalizeDomain(settings.customDomain || ''),
+		redirectDomains: normalizeDomainList(settings.redirectDomains || [])
+	};
+}
+
+function getPublicProjectSnapshot(project) {
+	const p = project || {};
+	const settings = getPublicProjectSettings(p);
+	const components = Array.isArray(p.components) ? [...p.components].sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
+	const incidents = Array.isArray(p.incidents)
+		? [...p.incidents].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+		: [];
+	const scheduledMaintenances = Array.isArray(p.scheduledMaintenances)
+		? [...p.scheduledMaintenances].sort((a, b) => new Date(a.scheduledStart || 0) - new Date(b.scheduledStart || 0))
+		: [];
+	return {
+		id: p.id,
+		name: p.name || '',
+		slug: p.slug || '',
+		customDomain: settings.customDomain,
+		redirectDomains: settings.redirectDomains,
+		settings,
+		components,
+		incidents,
+		scheduledMaintenances,
+		uptimeData: (p.uptimeData && typeof p.uptimeData === 'object') ? p.uptimeData : {},
+		overallStatus: computeOverallStatus(components),
+		updatedAt: new Date().toISOString()
+	};
+}
+
 function findProjectByDomain(domain, excludeProjectId) {
 	const normalized = normalizeDomain(domain);
 	if (!normalized) return null;
@@ -894,6 +960,7 @@ try {
 
 	// List all projects (public, for project picker)
 	app.get('/api/v1/projects', (_req, res) => {
+		res.setHeader('Cache-Control', 'public,max-age=60,stale-while-revalidate=120');
 		res.json(db.projects.map(p => ({ id: p.id, name: p.name, slug: p.slug })));
 	});
 
@@ -914,13 +981,7 @@ try {
 	});
 
 	app.get('/api/v1/projects/:slug/status', slugMiddleware, (req, res) => {
-		const comps = req.project.components;
-		let overall = 'operational';
-		if (comps.some(c => c.status === 'major_outage')) overall = 'major_outage';
-		else if (comps.some(c => c.status === 'partial_outage')) overall = 'partial_outage';
-		else if (comps.some(c => c.status === 'degraded_performance')) overall = 'degraded_performance';
-		else if (comps.some(c => c.status === 'under_maintenance')) overall = 'under_maintenance';
-		res.json({ status: overall, updatedAt: new Date().toISOString() });
+		res.json({ status: computeOverallStatus(req.project.components), updatedAt: new Date().toISOString() });
 	});
 
 	app.get('/api/v1/projects/:slug/components', slugMiddleware, (req, res) => {
@@ -955,20 +1016,12 @@ try {
 	});
 
 	app.get('/api/v1/projects/:slug/settings', slugMiddleware, (req, res) => {
-		const {
-			pageTitle, pageName, organizationLegalName, companyName, companyUrl, supportUrl, privacyPolicyUrl,
-			notificationFromName, notificationFromEmail, notificationReplyToEmail, notificationFooterMessage, notificationLogoUrl, notificationUseStatusLogo,
-			defaultSmsCountryCode, timezone, googleAnalyticsTrackingId, hideFromSearchEngines,
-			brandColor, aboutText, componentsView, showUptime, disabledTabs, customDomain, redirectDomains
-		} = req.project.settings || {};
-		res.json({
-			pageTitle, pageName, organizationLegalName, companyName, companyUrl, supportUrl, privacyPolicyUrl,
-			notificationFromName, notificationFromEmail, notificationReplyToEmail, notificationFooterMessage, notificationLogoUrl, notificationUseStatusLogo,
-			defaultSmsCountryCode, timezone, googleAnalyticsTrackingId, hideFromSearchEngines,
-			brandColor, aboutText, componentsView, showUptime, disabledTabs,
-			customDomain: normalizeDomain(customDomain || ''),
-			redirectDomains: normalizeDomainList(redirectDomains || [])
-		});
+		res.json(getPublicProjectSettings(req.project));
+	});
+
+	app.get('/api/v1/projects/:slug/public-snapshot', slugMiddleware, (req, res) => {
+		res.setHeader('Cache-Control', 'public,max-age=15,stale-while-revalidate=30');
+		res.json(getPublicProjectSnapshot(req.project));
 	});
 
 	app.post('/api/v1/projects/:slug/subscribers', slugMiddleware, (req, res) => {
@@ -1747,10 +1800,7 @@ try {
 			if (!proj) return json(res, { error: 'Project not found' }, 404);
 			const sub = m[2];
 			if (req.method === 'GET' && sub === 'status') {
-				let overall = 'operational';
-				if (proj.components.some(c => c.status === 'major_outage')) overall = 'major_outage';
-				else if (proj.components.some(c => c.status === 'degraded_performance')) overall = 'degraded_performance';
-				return json(res, { status: overall, updatedAt: new Date().toISOString() });
+				return json(res, { status: computeOverallStatus(proj.components), updatedAt: new Date().toISOString() });
 			}
 			if (req.method === 'GET' && sub === 'components') {
 				return json(res, { components: (proj.components || []).sort((a, b) => a.order - b.order) });
@@ -1758,21 +1808,8 @@ try {
 			if (req.method === 'GET' && sub === 'incidents') return json(res, proj.incidents || []);
 			if (req.method === 'GET' && sub === 'uptime') return json(res, proj.uptimeData || {});
 			if (req.method === 'GET' && sub === 'scheduled-maintenances') return json(res, proj.scheduledMaintenances || []);
-			if (req.method === 'GET' && sub === 'settings') {
-				const {
-					pageTitle, pageName, organizationLegalName, companyName, companyUrl, supportUrl, privacyPolicyUrl,
-					notificationFromName, notificationFromEmail, notificationReplyToEmail, notificationFooterMessage, notificationLogoUrl, notificationUseStatusLogo,
-					defaultSmsCountryCode, timezone, googleAnalyticsTrackingId, hideFromSearchEngines,
-					brandColor, aboutText, componentsView, showUptime, disabledTabs, customDomain, redirectDomains
-				} = proj.settings || {};
-				return json(res, {
-					pageTitle, pageName, organizationLegalName, companyName, companyUrl, supportUrl, privacyPolicyUrl,
-					notificationFromName, notificationFromEmail, notificationReplyToEmail, notificationFooterMessage, notificationLogoUrl, notificationUseStatusLogo,
-					defaultSmsCountryCode, timezone, googleAnalyticsTrackingId, hideFromSearchEngines,
-					brandColor, aboutText, componentsView, showUptime, disabledTabs,
-					customDomain: normalizeDomain(customDomain || ''), redirectDomains: normalizeDomainList(redirectDomains || [])
-				});
-			}
+			if (req.method === 'GET' && sub === 'settings') return json(res, getPublicProjectSettings(proj));
+			if (req.method === 'GET' && sub === 'public-snapshot') return json(res, getPublicProjectSnapshot(proj));
 		}
 
 		const adminMatch = pathname.match(/^\/api\/v1\/admin\/projects\/(\d+)\/components\/reorder$/);
