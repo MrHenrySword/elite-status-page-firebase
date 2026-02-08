@@ -7,9 +7,12 @@ Your original project stays unchanged.
 
 - Hosting rewrites all traffic to one Cloud Function: `api`
 - The Function runs your Express server from `functions/server.js`
-- `data.json` and `audit.log` are mirrored to Firestore:
-  - App state document: `statusPage/main`
-  - Audit subcollection: `statusPage/main/audit/*`
+- Server state is persisted to Firestore collections:
+  - `status_meta/main` (platform settings, nextId, migration metadata)
+  - `status_users/{id}`
+  - `status_projects/{id}`
+  - `status_audit/{autoId}`
+- Local `data.json`/`audit.log` are only runtime cache files in the Function environment.
 
 This keeps your existing server logic while giving you Firestore-backed persistence for deploy.
 
@@ -63,6 +66,6 @@ After deploy, open your Hosting URL.
 
 ## Notes
 
-1. This copy stores full app state in one Firestore document (`statusPage/main`), which is simple but has Firestore doc size limits (1 MiB).
-2. Keep this as single-instance style state until you do a full data-model migration.
-3. If you need true horizontal scale, migrate to normalized Firestore collections (projects/components/incidents/users) instead of one document.
+1. This copy now uses Firestore collections (not a single document).
+2. `server.js` is still your original app logic; persistence is adapted in `functions/index.js`.
+3. For very large workloads, you can further normalize project internals (components/incidents/maintenances) into dedicated subcollections.
