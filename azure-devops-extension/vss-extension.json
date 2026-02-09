@@ -1,0 +1,86 @@
+{
+  "manifestVersion": 1,
+  "id": "elite-status-page",
+  "publisher": "your-publisher-id",
+  "version": "1.0.0",
+  "name": "Elite Status Page",
+  "description": "Project-level status monitoring hub for Azure DevOps.",
+  "public": false,
+  "targets": [
+    {
+      "id": "Microsoft.VisualStudio.Services"
+    }
+  ],
+  "categories": [
+    "Azure Boards",
+    "Azure Repos",
+    "Azure Pipelines"
+  ],
+  "icons": {
+    "default": "images/icon.svg"
+  },
+  "content": {
+    "details": {
+      "path": "README.md"
+    }
+  },
+  "files": [
+    {
+      "path": "src",
+      "addressable": true
+    },
+    {
+      "path": "images",
+      "addressable": true
+    },
+    {
+      "path": "extension-config.json",
+      "addressable": true
+    },
+    {
+      "path": "README.md",
+      "addressable": true
+    }
+  ],
+  "contributions": [
+    {
+      "id": "elite-status-hub-repos",
+      "type": "ms.vss-web.hub",
+      "targets": [
+        "ms.vss-code-web.code-hub-group"
+      ],
+      "properties": {
+        "name": "Status",
+        "order": 120,
+        "uri": "src/hub.html"
+      }
+    },
+    {
+      "id": "elite-status-hub-boards",
+      "type": "ms.vss-web.hub",
+      "targets": [
+        "ms.vss-work-web.work-hub-group"
+      ],
+      "properties": {
+        "name": "Status",
+        "order": 120,
+        "uri": "src/hub.html"
+      }
+    },
+    {
+      "id": "elite-status-hub-pipelines",
+      "type": "ms.vss-web.hub",
+      "targets": [
+        "ms.vss-build-web.build-release-hub-group"
+      ],
+      "properties": {
+        "name": "Status",
+        "order": 120,
+        "uri": "src/hub.html"
+      }
+    }
+  ],
+  "scopes": [
+    "vso.project"
+  ]
+}

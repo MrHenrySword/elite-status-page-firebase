@@ -1,0 +1,18 @@
+{
+  "name": "elite-status-page-azure-devops-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Azure DevOps extension package for Elite Status Page",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "validate": "node scripts/validate-config.js",
+    "package": "npm run validate && tfx extension create --manifest-globs vss-extension.json",
+    "publish": "npm run validate && tfx extension publish --manifest-globs vss-extension.json",
+    "share": "npm run validate && tfx extension share --manifest-globs vss-extension.json"
+  },
+  "devDependencies": {
+    "tfx-cli": "^0.22.0"
+  }
+}

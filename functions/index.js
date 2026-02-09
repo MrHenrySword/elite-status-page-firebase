@@ -200,7 +200,6 @@ async function persistDataToCollections(data) {
 	const projects = Array.isArray(safe.projects) ? safe.projects : [];
 	const metaPayload = {
 		nextId: safe.nextId || 2000,
-		platformSettings: safe.platformSettings || {},
 		securityMigrations: safe.securityMigrations || {},
 		updatedAt: new Date().toISOString(),
 		schemaVersion: 1
@@ -226,7 +225,6 @@ async function loadDataFromCollections() {
 	return {
 		users,
 		projects,
-		platformSettings: meta.platformSettings || {},
 		nextId: meta.nextId || 2000,
 		securityMigrations: meta.securityMigrations || {}
 	};

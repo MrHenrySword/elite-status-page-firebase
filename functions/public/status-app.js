@@ -4,6 +4,7 @@ let PROJECT_SOURCE = 'path';
 let PUBLIC_SNAPSHOT = null;
 let DATA_SOURCE = 'api';
 let firebaseInitPromise = null;
+let firebaseHostingRuntimePromise = null;
 let firestoreUnsubscribe = null;
 
 const FIREBASE_SCRIPT_VERSION = '10.12.5';
@@ -194,11 +195,28 @@ function loadScriptOnce(src) {
     return scriptLoadCache[src];
 }
 
+async function canUseHostingFirebaseRuntime() {
+    if (firebaseHostingRuntimePromise) return firebaseHostingRuntimePromise;
+    firebaseHostingRuntimePromise = (async () => {
+        try {
+            const res = await fetch('/__/firebase/init.js', { credentials: 'same-origin', cache: 'no-store' });
+            if (!res.ok) return false;
+            const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+            return contentType.includes('javascript');
+        } catch (e) {
+            return false;
+        }
+    })();
+    return firebaseHostingRuntimePromise;
+}
+
 async function getFirebaseClient() {
     if (firebaseInitPromise) return firebaseInitPromise;
     firebaseInitPromise = (async () => {
         if (window.firebase && window.firebase.firestore) return window.firebase;
         try {
+            const runtimeAvailable = await canUseHostingFirebaseRuntime();
+            if (!runtimeAvailable) return null;
             await loadScriptOnce(`/__/firebase/${FIREBASE_SCRIPT_VERSION}/firebase-app-compat.js`);
             await loadScriptOnce(`/__/firebase/${FIREBASE_SCRIPT_VERSION}/firebase-firestore-compat.js`);
             await loadScriptOnce('/__/firebase/init.js');

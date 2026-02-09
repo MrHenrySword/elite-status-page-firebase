@@ -1,74 +1,103 @@
-# 3E Elite Status - Firebase/Firestore Copy
+# Elite Status Page
 
-This is a deployment copy of your status-page project for Firebase Hosting + Cloud Functions + Firestore.
-Your original project stays unchanged.
+This repository now follows an extension-first architecture:
 
-## Architecture in this copy
+- Status backend and admin API run on Firebase Hosting + Cloud Functions + Firestore
+- Azure DevOps installable extension package lives in `azure-devops-extension/`
+- Legacy Platform tab/settings have been removed from UI and backend
 
-- Hosting serves static files directly from `functions/public` (no Function call for page/assets)
-- Hosting rewrites only `/api/**` and `/health` to one Cloud Function: `api`
-- The Function runs your Express server from `functions/server.js` for auth/admin/mutations
-- Server state is persisted to Firestore collections:
-  - `status_meta/main` (platform settings, nextId, migration metadata)
+## Repository Structure
+
+- `functions/`: Express API runtime, Firebase function entrypoint, static admin/public UI
+- `hosting/`: Firebase hosting root
+- `azure-devops-extension/`: Azure DevOps extension manifest, hub UI, packaging scripts
+
+## Backend Architecture
+
+- Hosting serves static assets from `functions/public`
+- Hosting rewrites `/api/**` and `/health` to Cloud Function `api`
+- Data is persisted in Firestore collections:
+  - `status_meta/main` (nextId, migration metadata)
   - `status_users/{id}`
   - `status_projects/{id}`
-  - `status_public_projects/{id}` (sanitized client-readable projection for public status page)
+  - `status_public_projects/{id}`
   - `status_audit/{autoId}`
-- Public status page reads from Firestore directly when available and falls back to one API snapshot endpoint.
-- Local `data.json`/`audit.log` are runtime cache files in the Function environment.
 
-This keeps your existing server logic while giving you Firestore-backed persistence for deploy.
+## Local Setup
 
-## 1) Prerequisites
-
+1. Install prerequisites
 - Node.js 20+
 - Firebase CLI: `npm i -g firebase-tools`
-- A Firebase project with Billing enabled (for 2nd gen Functions)
 
-## 2) Configure project
-
-From this folder:
+2. Configure Firebase project
 
 ```bash
 firebase login
 firebase use --add
 ```
 
-Create a local `.firebaserc` from `.firebaserc.example` and set your project id.
-
-## 3) Configure environment variables
-
-Copy:
+3. Configure function environment
 
 ```bash
 cp functions/.env.example functions/.env
 ```
 
-Then set at minimum:
-
-- `JWT_SECRET` (required, 32+ chars)
+Required values:
+- `JWT_SECRET` (32+ chars)
 - `INITIAL_ADMIN_EMAIL`
 - `INITIAL_ADMIN_PASSWORD`
-- `CORS_ORIGIN` (your web.app/custom domains)
+- `CORS_ORIGIN` (include your deployed frontend domains)
 
-## 4) Install dependencies
+4. Install and run
 
 ```bash
 cd functions
 npm install
-cd ..
+npm run serve
 ```
 
-## 5) Deploy
+## Deploy Backend
 
 ```bash
 firebase deploy --only functions,hosting,firestore:rules
 ```
 
-After deploy, open your Hosting URL.
+## Azure DevOps Extension
 
-## Notes
+The extension package is independent and production-oriented.
 
-1. This copy now uses Firestore collections (not a single document).
-2. `server.js` remains the API/auth runtime; `functions/public/status-app.js` now does most public status processing client-side.
-3. `functions/index.js` keeps private collections synced and also writes `status_public_projects` for low-cost public reads.
+1. Configure `azure-devops-extension/vss-extension.json`
+- Set `publisher`
+- Set extension `id`/`version`
+
+2. Configure `azure-devops-extension/extension-config.json`
+- `apiBaseUrl` (required)
+- Optional `defaultProjectSlug`
+- Optional `projectSlugMap`
+- Optional `publicPageUrlTemplate`
+- Optional `adminPageUrl`
+
+3. Package and publish
+
+```bash
+cd azure-devops-extension
+npm install
+npm run package
+npm run publish
+```
+
+`npm run validate` prevents packaging when placeholder URLs are still present.
+
+The extension contributes the same `Status` hub in:
+- `Code`
+- `Boards`
+- `Pipelines`
+
+CI workflow for extension packaging/publishing:
+- `.github/workflows/azure-devops-extension.yml`
+- requires secret: `AZDO_MARKETPLACE_PAT`
+
+4. CORS requirement
+- Ensure backend `CORS_ORIGIN` allows Azure DevOps UI origins such as:
+  - `https://dev.azure.com`
+  - `https://<your-org>.visualstudio.com`

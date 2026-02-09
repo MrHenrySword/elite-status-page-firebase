@@ -220,36 +220,14 @@ function getExpectedDnsTarget(hostHeader) {
 	return normalizeDomain(process.env.CUSTOM_DOMAIN_TARGET || process.env.WEBSITE_HOSTNAME || hostHeader || '');
 }
 
-function defaultPlatformSettings() {
-	return {
-		azureTenantId: '',
-		azureSubscriptionId: '',
-		azureResourceGroup: '',
-		azureAppServiceName: '',
-		azureStatusBaseDomain: '',
-		azureKeyVaultName: '',
-		azureAppInsightsName: '',
-		azureStorageAccountName: '',
-		azureCosmosAccountName: '',
-		useManagedIdentity: true,
-		enableKeyVaultReferences: true
-	};
-}
+const ALLOWED_DISABLED_TABS = new Set(['components', 'incidents', 'maintenance', 'subscribers', 'projects', 'users', 'settings']);
 
-function sanitizePlatformSettings(input, current = {}) {
-	const base = { ...defaultPlatformSettings(), ...current };
-	if (!input || typeof input !== 'object') return base;
-	const out = { ...base };
-	const textFields = [
-		'azureTenantId', 'azureSubscriptionId', 'azureResourceGroup', 'azureAppServiceName',
-		'azureStatusBaseDomain', 'azureKeyVaultName', 'azureAppInsightsName',
-		'azureStorageAccountName', 'azureCosmosAccountName'
-	];
-	for (const key of textFields) {
-		if (Object.prototype.hasOwnProperty.call(input, key)) out[key] = String(input[key] || '').trim();
+function sanitizeDisabledTabs(input) {
+	if (!input || typeof input !== 'object') return {};
+	const out = {};
+	for (const key of ALLOWED_DISABLED_TABS) {
+		if (Object.prototype.hasOwnProperty.call(input, key)) out[key] = !!input[key];
 	}
-	if (Object.prototype.hasOwnProperty.call(input, 'useManagedIdentity')) out.useManagedIdentity = !!input.useManagedIdentity;
-	if (Object.prototype.hasOwnProperty.call(input, 'enableKeyVaultReferences')) out.enableKeyVaultReferences = !!input.enableKeyVaultReferences;
 	return out;
 }
 
@@ -371,7 +349,6 @@ function defaultData() {
 	return {
 		users: buildInitialUsers(),
 		projects: [defaultProject(1, '3E Elite', 'default')],
-		platformSettings: defaultPlatformSettings(),
 		nextId: 2000
 	};
 }
@@ -506,7 +483,6 @@ function loadData() {
 			const d = JSON.parse(raw);
 			if (!d.projects) d.projects = [];
 			if (!d.users) d.users = [];
-			d.platformSettings = sanitizePlatformSettings(d.platformSettings || {}, defaultPlatformSettings());
 			if (!d.nextId) d.nextId = 2000;
 			ensureInitialUsers(d);
 			// Migrate old flat format → project
@@ -540,7 +516,7 @@ function loadData() {
 				if (!p.settings.aboutText) p.settings.aboutText = 'Welcome to the status page. Here you can find live updates and incident history.';
 				if (!p.settings.componentsView) p.settings.componentsView = 'list';
 				if (typeof p.settings.showUptime !== 'boolean') p.settings.showUptime = true;
-				if (!p.settings.disabledTabs) p.settings.disabledTabs = {};
+				p.settings.disabledTabs = sanitizeDisabledTabs(p.settings.disabledTabs || {});
 				p.settings.customDomain = normalizeDomain(p.settings.customDomain || '');
 				if (p.settings.customDomain && !isValidDomainHost(p.settings.customDomain)) p.settings.customDomain = '';
 				p.settings.redirectDomains = normalizeDomainList(p.settings.redirectDomains || []).filter(d => d !== p.settings.customDomain);
@@ -558,6 +534,10 @@ function loadData() {
 						if (typeof c.order !== 'number') c.order = fallbackOrder++;
 					}
 				}
+			}
+			const allowedRootKeys = new Set(['users', 'projects', 'nextId', 'securityMigrations']);
+			for (const key of Object.keys(d)) {
+				if (!allowedRootKeys.has(key)) delete d[key];
 			}
 			return d;
 		}
@@ -627,7 +607,7 @@ function getPublicProjectSettings(project) {
 		aboutText: settings.aboutText || '',
 		componentsView: settings.componentsView || 'list',
 		showUptime: settings.showUptime !== false,
-		disabledTabs: (settings.disabledTabs && typeof settings.disabledTabs === 'object') ? settings.disabledTabs : {},
+		disabledTabs: sanitizeDisabledTabs(settings.disabledTabs || {}),
 		customDomain: normalizeDomain(settings.customDomain || ''),
 		redirectDomains: normalizeDomainList(settings.redirectDomains || [])
 	};
@@ -804,7 +784,6 @@ function summarizeAuditAction(action, meta) {
 		'user.create': 'Created user',
 		'user.update': 'Updated user',
 		'user.delete': 'Deleted user',
-		'platform.settings.update': 'Updated platform settings',
 		'auth.login': 'Logged in'
 	};
 	return map[action] || action;
@@ -1494,6 +1473,7 @@ try {
 		if (Object.prototype.hasOwnProperty.call(updates, 'notificationFooterMessage')) updates.notificationFooterMessage = String(updates.notificationFooterMessage || '').trim();
 		if (Object.prototype.hasOwnProperty.call(updates, 'notificationLogoUrl')) updates.notificationLogoUrl = String(updates.notificationLogoUrl || '').trim();
 		if (Object.prototype.hasOwnProperty.call(updates, 'notificationUseStatusLogo')) updates.notificationUseStatusLogo = !!updates.notificationUseStatusLogo;
+		if (Object.prototype.hasOwnProperty.call(updates, 'disabledTabs')) updates.disabledTabs = sanitizeDisabledTabs(updates.disabledTabs);
 		if (Object.prototype.hasOwnProperty.call(updates, 'pageName') && !Object.prototype.hasOwnProperty.call(updates, 'pageTitle')) {
 			updates.pageTitle = updates.pageName;
 		}
@@ -1517,35 +1497,6 @@ try {
 			customDomain: normalizeDomain(req.project.settings.customDomain || ''),
 			redirectDomains: normalizeDomainList(req.project.settings.redirectDomains || [])
 		});
-	});
-
-	// Platform settings (global, admin-only)
-	app.get('/api/v1/admin/platform/settings', authMiddleware, requireAdmin, (_req, res) => {
-		db.platformSettings = sanitizePlatformSettings(db.platformSettings || {}, defaultPlatformSettings());
-		res.json(db.platformSettings);
-	});
-
-	app.put('/api/v1/admin/platform/settings', authMiddleware, requireAdmin, (req, res) => {
-		db.platformSettings = sanitizePlatformSettings(req.body || {}, db.platformSettings || defaultPlatformSettings());
-		saveData(db);
-		logAudit(req.user, 'platform.settings.update', { fields: Object.keys(req.body || {}) });
-		res.json(db.platformSettings);
-	});
-
-	app.get('/api/v1/admin/platform/status', authMiddleware, requireAdmin, (_req, res) => {
-		const ps = sanitizePlatformSettings(db.platformSettings || {}, defaultPlatformSettings());
-		const status = {
-			isAzure,
-			websiteSiteName: process.env.WEBSITE_SITE_NAME || '',
-			websiteHostname: process.env.WEBSITE_HOSTNAME || '',
-			dataPersistencePath: DATA_FILE,
-			keyVaultConfigured: !!process.env.KEY_VAULT_NAME || !!ps.azureKeyVaultName,
-			appInsightsConfigured: !!process.env.APPLICATIONINSIGHTS_CONNECTION_STRING || !!ps.azureAppInsightsName,
-			managedIdentityConfigured: !!process.env.MSI_ENDPOINT || !!process.env.IDENTITY_ENDPOINT || !!ps.useManagedIdentity,
-			customDomainTarget: getExpectedDnsTarget(process.env.WEBSITE_HOSTNAME || ''),
-			lastCheckedAt: new Date().toISOString()
-		};
-		res.json(status);
 	});
 
 	// Users (global)

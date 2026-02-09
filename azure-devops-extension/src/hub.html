@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elite Status</title>
+  <link rel="stylesheet" href="./hub.css">
+  <script src="https://unpkg.com/azure-devops-extension-sdk@4.0.2/azure-devops-extension-sdk.min.js"></script>
+  <script defer src="./hub.js"></script>
+</head>
+<body>
+  <main class="layout">
+    <header class="header">
+      <div>
+        <h1>Elite Status</h1>
+        <p id="projectContext">Loading project context...</p>
+      </div>
+      <div class="header-actions">
+        <button id="openStatusBtn" class="btn btn-secondary" type="button">Open Status Page</button>
+        <button id="openAdminBtn" class="btn btn-primary" type="button">Open Admin</button>
+      </div>
+    </header>
+
+    <section class="controls card">
+      <label for="projectSelect">Status Project</label>
+      <select id="projectSelect"></select>
+      <button id="refreshBtn" class="btn btn-primary" type="button">Refresh</button>
+    </section>
+
+    <section class="stats">
+      <article class="stat card">
+        <p class="label">Overall Status</p>
+        <p id="overallStatus" class="value">-</p>
+      </article>
+      <article class="stat card">
+        <p class="label">Active Incidents</p>
+        <p id="activeIncidents" class="value">-</p>
+      </article>
+      <article class="stat card">
+        <p class="label">Scheduled Maintenance</p>
+        <p id="scheduledMaintenances" class="value">-</p>
+      </article>
+      <article class="stat card">
+        <p class="label">Components</p>
+        <p id="componentsCount" class="value">-</p>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>Recent Incidents</h2>
+      <div id="incidentsList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2>Runtime</h2>
+      <p id="runtimeInfo" class="muted">Initializing...</p>
+      <p id="errorMessage" class="error" hidden></p>
+    </section>
+  </main>
+</body>
+</html>

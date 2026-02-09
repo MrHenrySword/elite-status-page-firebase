@@ -228,7 +228,6 @@
                 <div class="nav-item" data-tab="projects" onclick="showTab('projects')"><span class="icon">&#128193;</span> Projects</div>
                 <div class="nav-item" data-tab="users" onclick="showTab('users')"><span class="icon">&#128101;</span> Users</div>
                 <div class="nav-item" data-tab="settings" onclick="showTab('settings')"><span class="icon">&#9881;</span> Settings</div>
-                <div class="nav-item" data-tab="platform" onclick="showTab('platform')"><span class="icon">&#9729;</span> Platform</div>
             </div>
         </nav>
         <div class="sidebar-footer">
@@ -547,7 +546,6 @@
                                 <label class="check-item"><input type="checkbox" id="toggle-projects"> Projects</label>
                                 <label class="check-item"><input type="checkbox" id="toggle-users"> Users</label>
                                 <label class="check-item"><input type="checkbox" id="toggle-settings"> Settings</label>
-                                <label class="check-item"><input type="checkbox" id="toggle-platform"> Platform</label>
                             </div>
                         </div>
                         <button class="btn btn-primary" id="menuSaveBtn" onclick="saveMenuVisibility()">Save Menu Visibility</button>
@@ -555,39 +553,6 @@
                 </div>
             </div>
 
-            <!-- Platform -->
-            <div class="tab-page" id="tab-platform">
-                <div class="card">
-                    <div class="card-head"><h3>Azure Service Settings</h3></div>
-                    <div class="card-body">
-                        <form id="platformSettingsForm">
-                            <div class="settings-grid">
-                                <div class="form-group"><label>Azure Tenant ID</label><input type="text" id="platTenantId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
-                                <div class="form-group"><label>Azure Subscription ID</label><input type="text" id="platSubscriptionId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
-                                <div class="form-group"><label>Resource Group</label><input type="text" id="platResourceGroup" placeholder="rg-status-prod"></div>
-                                <div class="form-group"><label>App Service Name</label><input type="text" id="platAppServiceName" placeholder="status-webapp-prod"></div>
-                                <div class="form-group"><label>Status Base Domain</label><input type="text" id="platStatusBaseDomain" placeholder="status.company.com"></div>
-                                <div class="form-group"><label>Key Vault Name</label><input type="text" id="platKeyVaultName" placeholder="kv-status-prod"></div>
-                                <div class="form-group"><label>Application Insights Name</label><input type="text" id="platAppInsightsName" placeholder="appi-status-prod"></div>
-                                <div class="form-group"><label>Storage Account</label><input type="text" id="platStorageAccountName" placeholder="ststatusprod"></div>
-                                <div class="form-group"><label>Cosmos Account</label><input type="text" id="platCosmosAccountName" placeholder="cosmos-status-prod"></div>
-                                <div class="form-group checkbox-row"><input type="checkbox" id="platUseManagedIdentity" style="width:auto"><label for="platUseManagedIdentity" style="margin:0">Use Managed Identity</label></div>
-                                <div class="form-group checkbox-row"><input type="checkbox" id="platEnableKeyVaultRefs" style="width:auto"><label for="platEnableKeyVaultRefs" style="margin:0">Use Key Vault references for secrets</label></div>
-                            </div>
-                            <button type="submit" class="btn btn-primary" id="platformSaveBtn">Save Platform Settings</button>
-                        </form>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
-                        <h3>Runtime Status</h3>
-                        <button class="btn btn-secondary btn-sm" type="button" onclick="loadPlatformStatus()">Refresh</button>
-                    </div>
-                    <div class="card-body" id="platformStatusBody">
-                        <div class="empty"><p>Loading platform status...</p></div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -1076,7 +1041,7 @@ function showTab(name) {
     document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
     document.getElementById('tab-' + name).classList.add('active');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const titles = { dashboard: 'Dashboard', components: 'Components', incidents: 'Incidents', maintenance: 'Scheduled Maintenance', subscribers: 'Subscribers', projects: 'Projects', users: 'Users', settings: 'Settings', platform: 'Platform' };
+    const titles = { dashboard: 'Dashboard', components: 'Components', incidents: 'Incidents', maintenance: 'Scheduled Maintenance', subscribers: 'Subscribers', projects: 'Projects', users: 'Users', settings: 'Settings' };
     document.getElementById('pageTitle').textContent = titles[name] || name;
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(n => { if (n.textContent.trim().toLowerCase().includes(name === 'dashboard' ? 'overview' : name)) n.classList.add('active'); });
@@ -1089,7 +1054,6 @@ function showTab(name) {
     if (name === 'projects') loadProjectsList();
     if (name === 'users') loadUsers();
     if (name === 'settings') loadSettings();
-    if (name === 'platform') { loadPlatformSettings(); loadPlatformStatus(); }
 }
 
 // ── Modals ────────────────────────────────────────────────────────────────
@@ -1782,7 +1746,6 @@ function applyMenuVisibility() {
     document.getElementById('toggle-projects').checked = !!map.projects;
     document.getElementById('toggle-users').checked = !!map.users;
     document.getElementById('toggle-settings').checked = !!map.settings;
-    document.getElementById('toggle-platform').checked = !!map.platform;
     const activeTab = document.querySelector('.tab-page.active');
     if (activeTab && activeTab.style.display === 'none') showTab('dashboard');
 }
@@ -1796,82 +1759,11 @@ async function saveMenuVisibility() {
         subscribers: document.getElementById('toggle-subscribers').checked,
         projects: document.getElementById('toggle-projects').checked,
         users: document.getElementById('toggle-users').checked,
-        settings: document.getElementById('toggle-settings').checked,
-        platform: document.getElementById('toggle-platform').checked
+        settings: document.getElementById('toggle-settings').checked
     };
     await api('PUT', projectPath('/settings'), { disabledTabs });
     toast('Menu visibility saved');
     applyMenuVisibility();
-}
-
-async function loadPlatformSettings() {
-    if (!isAdmin()) return;
-    const s = await api('GET', '/api/v1/admin/platform/settings');
-    if (!s || s.error) return;
-    document.getElementById('platTenantId').value = s.azureTenantId || '';
-    document.getElementById('platSubscriptionId').value = s.azureSubscriptionId || '';
-    document.getElementById('platResourceGroup').value = s.azureResourceGroup || '';
-    document.getElementById('platAppServiceName').value = s.azureAppServiceName || '';
-    document.getElementById('platStatusBaseDomain').value = s.azureStatusBaseDomain || '';
-    document.getElementById('platKeyVaultName').value = s.azureKeyVaultName || '';
-    document.getElementById('platAppInsightsName').value = s.azureAppInsightsName || '';
-    document.getElementById('platStorageAccountName').value = s.azureStorageAccountName || '';
-    document.getElementById('platCosmosAccountName').value = s.azureCosmosAccountName || '';
-    document.getElementById('platUseManagedIdentity').checked = s.useManagedIdentity !== false;
-    document.getElementById('platEnableKeyVaultRefs').checked = s.enableKeyVaultReferences !== false;
-}
-
-async function savePlatformSettings() {
-    if (!isAdmin()) { toast('Admin only'); return; }
-    const payload = {
-        azureTenantId: document.getElementById('platTenantId').value.trim(),
-        azureSubscriptionId: document.getElementById('platSubscriptionId').value.trim(),
-        azureResourceGroup: document.getElementById('platResourceGroup').value.trim(),
-        azureAppServiceName: document.getElementById('platAppServiceName').value.trim(),
-        azureStatusBaseDomain: document.getElementById('platStatusBaseDomain').value.trim(),
-        azureKeyVaultName: document.getElementById('platKeyVaultName').value.trim(),
-        azureAppInsightsName: document.getElementById('platAppInsightsName').value.trim(),
-        azureStorageAccountName: document.getElementById('platStorageAccountName').value.trim(),
-        azureCosmosAccountName: document.getElementById('platCosmosAccountName').value.trim(),
-        useManagedIdentity: document.getElementById('platUseManagedIdentity').checked,
-        enableKeyVaultReferences: document.getElementById('platEnableKeyVaultRefs').checked
-    };
-    const saved = await api('PUT', '/api/v1/admin/platform/settings', payload);
-    if (saved && saved.error) { toast(saved.error); return; }
-    toast('Platform settings saved');
-    await loadPlatformStatus();
-}
-
-async function loadPlatformStatus() {
-    if (!isAdmin()) return;
-    const status = await api('GET', '/api/v1/admin/platform/status');
-    const container = document.getElementById('platformStatusBody');
-    if (!container) return;
-    if (!status || status.error) {
-        container.innerHTML = '<div class="empty"><p>Unable to load runtime status.</p></div>';
-        return;
-    }
-    container.innerHTML = `
-        <div class="settings-grid">
-            <div class="form-group"><label>Running in Azure</label><input type="text" readonly value="${status.isAzure ? 'Yes' : 'No'}"></div>
-            <div class="form-group"><label>Site Name</label><input type="text" readonly value="${esc(status.websiteSiteName || '-')}"></div>
-            <div class="form-group"><label>Hostname</label><input type="text" readonly value="${esc(status.websiteHostname || '-')}"></div>
-            <div class="form-group"><label>Custom Domain Target</label><input type="text" readonly value="${esc(status.customDomainTarget || '-')}"></div>
-            <div class="form-group"><label>Key Vault Configured</label><input type="text" readonly value="${status.keyVaultConfigured ? 'Yes' : 'No'}"></div>
-            <div class="form-group"><label>App Insights Configured</label><input type="text" readonly value="${status.appInsightsConfigured ? 'Yes' : 'No'}"></div>
-            <div class="form-group"><label>Managed Identity</label><input type="text" readonly value="${status.managedIdentityConfigured ? 'Available' : 'Not detected'}"></div>
-            <div class="form-group"><label>Data Path</label><input type="text" readonly value="${esc(status.dataPersistencePath || '-')}"></div>
-            <div class="form-group"><label>Last Checked</label><input type="text" readonly value="${esc(new Date(status.lastCheckedAt).toLocaleString())}"></div>
-        </div>
-    `;
-}
-
-const platformSettingsForm = document.getElementById('platformSettingsForm');
-if (platformSettingsForm) {
-    platformSettingsForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await savePlatformSettings();
-    });
 }
 
 function applyRolePermissions() {
@@ -1879,21 +1771,16 @@ function applyRolePermissions() {
     if (usersNav) usersNav.style.display = isAdmin() ? '' : 'none';
     const usersTab = document.getElementById('tab-users');
     if (usersTab && !isAdmin()) usersTab.style.display = 'none';
-    const platformNav = document.querySelector('.nav-item[data-tab="platform"]');
-    if (platformNav) platformNav.style.display = isAdmin() ? '' : 'none';
-    const platformTab = document.getElementById('tab-platform');
-    if (platformTab && !isAdmin()) platformTab.style.display = 'none';
 
     const editOnlyButtons = [
         'qaIncidentBtn', 'qaMaintenanceBtn', 'qaComponentBtn',
         'componentsAddBtn', 'incidentsAddBtn', 'maintenanceAddBtn', 'projectsAddBtn',
-        'settingsSaveBtn', 'menuSaveBtn', 'platformSaveBtn'
+        'settingsSaveBtn', 'menuSaveBtn'
     ];
     editOnlyButtons.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
-        if (id === 'platformSaveBtn') el.style.display = isAdmin() ? '' : 'none';
-        else el.style.display = canEdit() ? '' : 'none';
+        el.style.display = canEdit() ? '' : 'none';
     });
 }
 

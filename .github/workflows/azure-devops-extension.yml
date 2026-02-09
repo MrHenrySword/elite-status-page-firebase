@@ -1,0 +1,112 @@
+name: Azure DevOps Extension CI
+
+on:
+  pull_request:
+    paths:
+      - "azure-devops-extension/**"
+      - ".github/workflows/azure-devops-extension.yml"
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+    paths:
+      - "azure-devops-extension/**"
+      - ".github/workflows/azure-devops-extension.yml"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish generated VSIX to Visual Studio Marketplace"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  EXTENSION_DIR: azure-devops-extension
+
+jobs:
+  package:
+    name: Validate and Package
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.EXTENSION_DIR }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "${{ env.EXTENSION_DIR }}/package-lock.json"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate extension configuration
+        run: npm run validate
+
+      - name: Create VSIX package
+        run: |
+          npx tfx extension create --manifest-globs vss-extension.json
+          mkdir -p dist
+          mv ./*.vsix dist/
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: elite-status-vsix
+          path: ${{ env.EXTENSION_DIR }}/dist/*.vsix
+          if-no-files-found: error
+
+  publish:
+    name: Publish to Marketplace
+    needs: package
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true')
+    defaults:
+      run:
+        working-directory: ${{ env.EXTENSION_DIR }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "${{ env.EXTENSION_DIR }}/package-lock.json"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download VSIX artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: elite-status-vsix
+          path: ${{ env.EXTENSION_DIR }}/dist
+
+      - name: Publish extension
+        env:
+          AZDO_MARKETPLACE_PAT: ${{ secrets.AZDO_MARKETPLACE_PAT }}
+        run: |
+          if [ -z "${AZDO_MARKETPLACE_PAT}" ]; then
+            echo "::error::Missing required secret AZDO_MARKETPLACE_PAT"
+            exit 1
+          fi
+
+          VSIX_PATH="$(ls dist/*.vsix | head -n 1)"
+          if [ -z "${VSIX_PATH}" ]; then
+            echo "::error::No VSIX artifact found in dist/"
+            exit 1
+          fi
+
+          npx tfx extension publish --vsix "${VSIX_PATH}" --token "${AZDO_MARKETPLACE_PAT}" --no-prompt
