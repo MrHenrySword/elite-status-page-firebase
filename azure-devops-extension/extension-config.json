@@ -1,9 +1,7 @@
 {
-  "apiBaseUrl": "https://your-status-api.example.com",
-  "defaultProjectSlug": "",
-  "projectSlugMap": {
-    "Example Azure DevOps Project": "default"
-  },
-  "publicPageUrlTemplate": "https://your-status-site.example.com/p/{slug}",
-  "adminPageUrl": "https://your-status-site.example.com/admin.html"
+  "apiBaseUrl": "https://status-page-b8b51-main.web.app",
+  "defaultProjectSlug": "default",
+  "projectSlugMap": {},
+  "publicPageUrlTemplate": "https://status-page-b8b51-main.web.app/p/{slug}",
+  "adminPageUrl": "https://status-page-b8b51-main.web.app/admin.html"
 }

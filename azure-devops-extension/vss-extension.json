@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
   "id": "elite-status-page",
-  "publisher": "your-publisher-id",
-  "version": "1.0.0",
+  "publisher": "mrhenrysword",
+  "version": "1.0.1",
   "name": "Elite Status Page",
   "description": "Project-level status monitoring hub for Azure DevOps.",
   "public": false,
