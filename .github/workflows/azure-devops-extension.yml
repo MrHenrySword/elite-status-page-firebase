@@ -31,6 +31,8 @@ jobs:
   package:
     name: Validate and Package
     runs-on: ubuntu-latest
+    outputs:
+      config_ready: ${{ steps.ready.outputs.config_ready }}
     defaults:
       run:
         working-directory: ${{ env.EXTENSION_DIR }}
@@ -38,7 +40,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check extension config readiness
+        id: ready
+        run: |
+          READY=true
+
+          if grep -q "your-status-api.example.com" extension-config.json; then READY=false; fi
+          if grep -q "your-status-site.example.com" extension-config.json; then READY=false; fi
+          if grep -q "your-publisher-id" vss-extension.json; then READY=false; fi
+
+          echo "config_ready=${READY}" >> "${GITHUB_OUTPUT}"
+          if [ "${READY}" != "true" ]; then
+            echo "::notice::Extension config uses placeholders. Skipping package/publish until real values are set."
+          fi
+
       - name: Setup Node.js
+        if: steps.ready.outputs.config_ready == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -46,18 +63,22 @@ jobs:
           cache-dependency-path: "${{ env.EXTENSION_DIR }}/package-lock.json"
 
       - name: Install dependencies
+        if: steps.ready.outputs.config_ready == 'true'
         run: npm ci
 
       - name: Validate extension configuration
+        if: steps.ready.outputs.config_ready == 'true'
         run: npm run validate
 
       - name: Create VSIX package
+        if: steps.ready.outputs.config_ready == 'true'
         run: |
           npx tfx extension create --manifest-globs vss-extension.json
           mkdir -p dist
           mv ./*.vsix dist/
 
       - name: Upload VSIX artifact
+        if: steps.ready.outputs.config_ready == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: elite-status-vsix
@@ -69,8 +90,11 @@ jobs:
     needs: package
     runs-on: ubuntu-latest
     if: >-
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true')
+      needs.package.outputs.config_ready == 'true' &&
+      (
+        (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true')
+      )
     defaults:
       run:
         working-directory: ${{ env.EXTENSION_DIR }}
