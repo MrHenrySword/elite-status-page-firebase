@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3E Elite Status</title>
-    <link rel="icon" href="/assets/brand/Elite-Logo-01.png" type="image/png">
-    <link rel="apple-touch-icon" href="/assets/brand/Elite-Logo-01.png">
+    <link id="statusFavicon" rel="icon" href="/assets/brand/Elite-Logo-01.png" type="image/png">
+    <link id="statusAppleIcon" rel="apple-touch-icon" href="/assets/brand/Elite-Logo-01.png">
     <meta property="og:title" content="3E Elite Status">
     <meta property="og:description" content="Live status and uptime updates.">
-    <meta property="og:image" content="/assets/brand/Elite-Logo-01.png">
+    <meta id="statusOgImage" property="og:image" content="/assets/brand/Elite-Logo-01.png">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:image" content="/assets/brand/Elite-Logo-01.png">
+    <meta id="statusTwitterImage" name="twitter:image" content="/assets/brand/Elite-Logo-01.png">
     <meta name="robots" content="index,follow" id="metaRobots">
     <link rel="stylesheet" href="/theme.css">
     <style>
@@ -23,6 +23,7 @@
         .header-inner{max-width:var(--container-max);margin:0 auto;padding:0 20px;display:flex;justify-content:space-between;align-items:center}
         .header-logo{font-size:18px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:16px}
         .header-logo .brand-logo.full{height:86px}
+        #pageTitle{display:inline-block;font-size:24px;font-weight:800;letter-spacing:.2px;color:var(--brand-primary);line-height:1.1}
         .header-actions{display:flex;gap:12px;align-items:center}
         .btn-subscribe{background:var(--brand-primary);color:#fff;border:none;padding:10px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,transform .15s}
         .btn-subscribe:hover{background:var(--brand-primary-hover);transform:translateY(-1px)}
@@ -46,19 +47,22 @@
 
         /* Component groups */
         .component-group{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);margin-top:24px;overflow:hidden;box-shadow:var(--shadow-card)}
+        .dual-components-banner{margin-top:24px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#f7f8fd;color:#42526e;font-size:12px}
+        .component-source-title{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:22px;font-weight:700;color:rgba(255,255,255,.96);letter-spacing:.1px;line-height:1.2}
+        .component-source-meta{font-size:12px;color:#7a869a;margin-top:2px}
         .group-collapsed .group-body{display:none}
         .group-collapsed .group-chevron{transform:rotate(-90deg)}
         .tree-toggle{display:inline-block;width:14px;color:var(--text-secondary);cursor:pointer}
         .tree-children-hidden{display:none}
-        .group-header{padding:16px 20px;font-size:14px;font-weight:600;color:var(--text-primary);background:#fbfbfe;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
-        .group-header:hover{background:#f4f5fb}
+        .group-header{padding:20px 20px;font-size:14px;font-weight:600;color:#121217;background:var(--brand-primary);border-bottom:1px solid rgba(18,18,23,.15);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+        .group-header:hover{background:var(--brand-primary-hover)}
         .group-chevron{transition:transform .2s;font-size:11px;color:var(--text-secondary)}
         .group-chevron.collapsed{transform:rotate(-90deg)}
         .group-body.collapsed{display:none}
         .component-row{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f1f2f7;transition:background .1s}
         .component-row:last-child{border-bottom:none}
         .component-row:hover{background:#fafbff}
-        .component-name{font-size:14px;color:var(--text-primary);flex:1}
+        .component-name{font-size:15px;color:var(--text-primary);flex:1}
         .component-status-label{font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px}
         .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
         .status-dot.operational{background:var(--success)}
@@ -202,15 +206,52 @@
             .uptime-bars{height:24px}
             .status-bar{flex-direction:column;align-items:flex-start}
             .history-tabs{flex-wrap:wrap}
+            .component-source-title{font-size:19px}
+            .component-name{font-size:14px}
+        }
+
+        /* Skip-nav */
+        .skip-nav{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:999;padding:8px 16px;background:var(--brand-primary);color:#fff;font-size:14px;font-weight:600;border-radius:0 0 var(--radius-sm) 0;text-decoration:none}
+        .skip-nav:focus{left:0;top:0;width:auto;height:auto;overflow:visible}
+
+        /* Focus-visible */
+        :focus-visible{outline:2px solid var(--brand-primary);outline-offset:2px}
+
+        /* ── Dark mode overrides ─────────────────────────────────────── */
+        @media(prefers-color-scheme:dark){
+            .header{background:var(--surface-elevated)}
+            .component-group{background:var(--surface-elevated)}
+            .component-row{border-bottom-color:var(--border)}
+            .component-row:hover{background:rgba(255,255,255,.03)}
+            .component-bars{background:var(--surface-elevated)}
+            .uptime-component{background:var(--surface-elevated)}
+            .incident-card{background:var(--surface-elevated)}
+            .incident-header{border-bottom-color:var(--border)}
+            .incident-update{border-bottom-color:var(--border)}
+            .maintenance-card{background:rgba(135,56,255,.1);border-color:rgba(135,56,255,.25)}
+            .maintenance-card .incident-header{border-bottom-color:rgba(135,56,255,.25)}
+            .about-card{background:var(--surface-elevated)}
+            .no-incidents{background:var(--surface-elevated)}
+            .modal{background:var(--surface-elevated)}
+            .modal-head{border-bottom-color:var(--border)}
+            .modal-footer{border-top-color:var(--border)}
+            .btn-cancel{background:var(--surface);color:var(--text-primary);border-color:var(--border)}
+            .form-group input,.form-group select{background:var(--surface);color:var(--text-primary);border-color:var(--border)}
+            .history-date{border-bottom-color:var(--border)}
+            .history-section{border-top-color:var(--border)}
+            .history-tabs{border-bottom-color:var(--border)}
+            .group-header{background:var(--brand-primary)}
         }
     </style>
 </head>
 <body>
+<noscript><p style="padding:40px;text-align:center">JavaScript is required to view the status page.</p></noscript>
+<a href="#main-content" class="skip-nav">Skip to content</a>
 
-<header class="header app-header">
+<header class="header app-header" role="banner">
     <div class="header-inner">
         <div class="header-logo brand" id="pageLogo">
-            <img class="brand-logo full" src="/assets/brand/Elite-Logo-01.png" alt="Elite Status">
+            <img id="statusHeaderLogo" class="brand-logo full" src="/assets/brand/Elite-Logo-01.png" alt="Elite Status">
             <span id="pageTitle">3E Elite Status</span>
         </div>
         <div class="header-actions">
@@ -228,7 +269,7 @@
     </div>
 </div>
 
-<div class="container">
+<main id="main-content" role="main" class="container">
     <section class="section" id="aboutSection" style="display:none">
         <div class="about-card">
             <div class="about-title">About This Site</div>
@@ -262,22 +303,21 @@
         <div class="section-header">
             <div class="section-title">Past Incidents</div>
         </div>
-        <div class="history-tabs">
-            <div class="history-tab active" onclick="showHistory(7, this)">7 Days</div>
-            <div class="history-tab" onclick="showHistory(14, this)">14 Days</div>
-            <div class="history-tab" onclick="showHistory(30, this)">30 Days</div>
+        <div class="history-tabs" role="tablist">
+            <div class="history-tab active" role="tab" tabindex="0" onclick="showHistory(3, this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">3 Days</div>
+            <div class="history-tab" role="tab" tabindex="0" onclick="showHistory(7, this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">7 Days</div>
+            <div class="history-tab" role="tab" tabindex="0" onclick="showHistory(10, this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">10 Days</div>
         </div>
         <div id="historyContainer"></div>
     </section>
-</div>
+</main>
 
-<footer class="app-footer">
+<footer class="app-footer" role="contentinfo">
     <div class="footer-inner">
         <div class="brand">
-            <img class="brand-logo full" src="/assets/brand/Elite-Logo-01.png" alt="Elite Status">
+            <img id="statusFooterLogo" class="brand-logo full" src="/assets/brand/Elite-Logo-01.png" alt="Elite Status">
         </div>
         <div class="footer-links">
-            <a href="/admin.html">Admin</a>
             <a href="/">Status Home</a>
         </div>
         <div class="footer-text">Powered by <strong>3E Elite StatusPage</strong></div>
@@ -285,17 +325,17 @@
 </footer>
 
 <!-- Subscribe Modal -->
-<div class="modal-overlay" id="subscribeModal">
+<div class="modal-overlay" id="subscribeModal" role="dialog" aria-modal="true" aria-label="Subscribe to updates">
     <div class="modal">
         <div class="modal-head">
             <h3>Subscribe to Updates</h3>
-            <button class="modal-close" onclick="closeSubscribeModal()">&times;</button>
+            <button class="modal-close" onclick="closeSubscribeModal()" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body">
             <p style="font-size:13px;color:#7a869a;margin-bottom:16px">Get notified when components change status. We'll only send relevant updates.</p>
             <div class="form-group">
                 <label>Email Address</label>
-                <input type="email" id="subscribeEmail" placeholder="you@example.com">
+                <input type="email" id="subscribeEmail" placeholder="you@example.com" required aria-required="true">
             </div>
             <div id="subscribeMsg" style="font-size:13px;margin-bottom:8px"></div>
         </div>

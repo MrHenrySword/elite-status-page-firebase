@@ -58,8 +58,23 @@ npm run serve
 
 ## Deploy Backend
 
+Before first deploy, set the JWT secret as a Firebase secret:
+
+```bash
+firebase functions:secrets:set JWT_SECRET
+```
+
+Then deploy:
+
 ```bash
 firebase deploy --only functions,hosting,firestore:rules
+```
+
+Post-deploy smoke test:
+
+```bash
+curl https://<your-project>.web.app/health
+curl https://<your-project>.web.app/api/v1/projects
 ```
 
 ## Azure DevOps Extension

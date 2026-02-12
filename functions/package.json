@@ -8,7 +8,11 @@
   "scripts": {
     "start": "node server.js",
     "serve": "firebase emulators:start --only functions,hosting,firestore",
-    "deploy": "firebase deploy --only functions,hosting,firestore:rules"
+    "deploy": "firebase deploy --only functions,hosting,firestore:rules",
+    "lint": "eslint . --ignore-pattern public/",
+    "lint:fix": "eslint . --fix --ignore-pattern public/",
+    "format": "prettier --write '**/*.js' '!public/**'",
+    "format:check": "prettier --check '**/*.js' '!public/**'"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0",
@@ -16,5 +20,9 @@
     "bcryptjs": "^2.4.3",
     "helmet": "^8.1.0",
     "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.0"
   }
 }

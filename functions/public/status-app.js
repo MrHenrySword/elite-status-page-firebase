@@ -9,6 +9,9 @@ let firestoreUnsubscribe = null;
 
 const FIREBASE_SCRIPT_VERSION = '10.12.5';
 const PUBLIC_PROJECT_COLLECTION = 'status_public_projects';
+const ELITE_BRAND_PURPLE = '#8738ff';
+const DEFAULT_BRAND_LOGO_URL = '/assets/brand/Elite-Logo-01.png';
+const DEFAULT_HISTORY_DAYS = 3;
 const scriptLoadCache = {};
 
 const pathMatch = window.location.pathname.match(/^\/p\/([^/]+)/);
@@ -83,6 +86,10 @@ function getLocalSnapshotResponse(url) {
     if (url === '/settings') return PUBLIC_SNAPSHOT.settings || {};
 
     if (url === '/components') {
+        const mode = (PUBLIC_SNAPSHOT.settings && PUBLIC_SNAPSHOT.settings.displayMode) || 'single';
+        if (mode === 'dual' || mode === 'triad') {
+            return null; // Let the server handle multi-project component assembly
+        }
         const components = [...(PUBLIC_SNAPSHOT.components || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
         return { components };
     }
@@ -115,6 +122,7 @@ async function fetchJSON(url) {
 
     const full = API_BASE ? API_BASE + url : url;
     const r = await fetch(full, { credentials: 'same-origin' });
+    if (!r.ok) throw new Error(`API ${r.status}: ${r.statusText}`);
     return r.json();
 }
 
@@ -384,6 +392,53 @@ async function loadStatus() {
 let SETTINGS = {};
 let loadedGaTrackingId = '';
 
+function applyStatusPageBranding(settings) {
+    const logo = String((settings && settings.statusPageLogoUrl) || '').trim() || DEFAULT_BRAND_LOGO_URL;
+    ['statusHeaderLogo', 'statusFooterLogo'].forEach((id) => {
+        const img = document.getElementById(id);
+        if (img) img.src = logo;
+    });
+    const favicon = document.getElementById('statusFavicon');
+    if (favicon) favicon.setAttribute('href', logo);
+    const apple = document.getElementById('statusAppleIcon');
+    if (apple) apple.setAttribute('href', logo);
+    const og = document.getElementById('statusOgImage');
+    if (og) og.setAttribute('content', logo);
+    const twitter = document.getElementById('statusTwitterImage');
+    if (twitter) twitter.setAttribute('content', logo);
+}
+
+function normalizeHexColor(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase();
+    if (/^#[0-9a-f]{3}$/i.test(raw)) {
+        const chars = raw.slice(1).split('');
+        return '#' + chars.map((c) => c + c).join('').toLowerCase();
+    }
+    return '';
+}
+
+function adjustHexColor(hex, percent) {
+    const normalized = normalizeHexColor(hex);
+    if (!normalized) return hex;
+    const num = parseInt(normalized.slice(1), 16);
+    const delta = Math.round(255 * (percent / 100));
+    const r = Math.max(0, Math.min(255, ((num >> 16) & 255) + delta));
+    const g = Math.max(0, Math.min(255, ((num >> 8) & 255) + delta));
+    const b = Math.max(0, Math.min(255, (num & 255) + delta));
+    return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+
+function applyProjectBrandColor(brandColor) {
+    const root = document.documentElement;
+    const normalized = normalizeHexColor(brandColor);
+    if (!root) return;
+    const chosen = (!normalized || normalized === '#0052cc') ? ELITE_BRAND_PURPLE : normalized;
+    root.style.setProperty('--brand-primary', chosen);
+    root.style.setProperty('--brand-primary-hover', adjustHexColor(chosen, -14));
+}
+
 function applyGoogleAnalytics(trackingId) {
     const id = (trackingId || '').trim();
     if (!id || id === loadedGaTrackingId) return;
@@ -406,6 +461,8 @@ async function loadSettings() {
     try {
         const s = await fetchJSON('/settings');
         SETTINGS = s || {};
+        applyStatusPageBranding(SETTINGS);
+        applyProjectBrandColor(s.brandColor);
         const displayTitle = s.pageTitle || s.pageName;
         if (displayTitle) {
             document.getElementById('pageTitle').textContent = displayTitle;
@@ -431,21 +488,64 @@ async function loadSettings() {
 }
 
 // ── Load components ──────────────────────────────────────────────────────
-async function loadComponents() {
-    const data = await fetchJSON('/components');
-    const container = document.getElementById('componentsContainer');
-    const viewMode = (SETTINGS && SETTINGS.componentsView) ? SETTINGS.componentsView : 'list';
-    if (viewMode === 'hidden') { container.innerHTML = ''; return; }
-    let html = '';
-    let list = data.components;
-    if (!list && (data.groups || data.ungrouped)) {
+function normalizeComponentSources(data) {
+    if (Array.isArray(data && data.sources) && data.sources.length) {
+        return data.sources.map((source, index) => ({
+            role: source && source.role ? source.role : (index === 0 ? 'primary' : 'secondary'),
+            projectId: source && source.projectId ? source.projectId : null,
+            projectName: source && source.projectName ? source.projectName : (index === 0 ? 'Primary Project' : 'Secondary Project'),
+            componentsView: source && source.componentsView ? source.componentsView : (SETTINGS.componentsView || 'list'),
+            components: Array.isArray(source && source.components) ? source.components : []
+        }));
+    }
+    let list = data && data.components;
+    if (!list && data && (data.groups || data.ungrouped)) {
         list = [];
         for (const g of data.groups || []) list.push(...(g.components || []));
         if (data.ungrouped) list.push(...data.ungrouped);
     }
-    const roots = buildTree(list || []);
-    if (!roots.length) { container.innerHTML = '<div class="no-incidents">No components available.</div>'; return; }
-    html += `<div class="component-group"><div class="group-body">${roots.map(n => treeRow(n, 0)).join('')}</div></div>`;
+    return [{
+        role: 'primary',
+        projectId: null,
+        projectName: SETTINGS.pageName || SETTINGS.pageTitle || 'Components',
+        componentsView: SETTINGS.componentsView || 'list',
+        components: Array.isArray(list) ? list : []
+    }];
+}
+
+function renderComponentSourceBlock(source, totalSources) {
+    const roots = buildTree(source.components || []);
+    if (!roots.length) {
+        return `<div class="component-group">
+            <div class="group-header">
+                <div>
+                    <div class="component-source-title">${esc(source.projectName || 'Components')}</div>
+                </div>
+            </div>
+            <div class="group-body"><div class="no-incidents">No components available.</div></div>
+        </div>`;
+    }
+    return `<div class="component-group">
+        <div class="group-header">
+            <div>
+                <div class="component-source-title">${esc(source.projectName || 'Components')}</div>
+            </div>
+        </div>
+        <div class="group-body">${roots.map((node) => treeRow(node, 0)).join('')}</div>
+    </div>`;
+}
+
+async function loadComponents() {
+    const data = await fetchJSON('/components');
+    const container = document.getElementById('componentsContainer');
+    const sources = normalizeComponentSources(data);
+    const visibleSources = sources.filter((source) => (source.componentsView || 'list') !== 'hidden');
+    if (!visibleSources.length) { container.innerHTML = ''; return; }
+    let html = '';
+    if (visibleSources.length > 1) {
+        html += `<div class="dual-components-banner">Combined components view is enabled for this status page.</div>`;
+    }
+    html += visibleSources.map((source) => renderComponentSourceBlock(source, visibleSources.length)).join('');
     container.innerHTML = html;
 }
 
@@ -659,7 +759,7 @@ async function loadMaintenances() {
 
 // ── Incident history ─────────────────────────────────────────────────────
 let cachedIncidents = [];
-let currentHistoryDays = 7;
+let currentHistoryDays = DEFAULT_HISTORY_DAYS;
 
 async function loadAllIncidents() {
     cachedIncidents = await fetchJSON('/incidents');
@@ -668,8 +768,12 @@ async function loadAllIncidents() {
 function showHistory(days, tabEl) {
     currentHistoryDays = days;
     document.querySelectorAll('.history-tab').forEach(t => t.classList.remove('active'));
-    const target = tabEl || (typeof event !== 'undefined' ? event.target : null);
-    if (target && target.classList) target.classList.add('active');
+    if (tabEl) tabEl.classList.add('active');
+    else {
+        const tabs = Array.from(document.querySelectorAll('.history-tab'));
+        const idx = ({ 3: 0, 7: 1, 10: 2 })[days];
+        if (idx !== undefined && tabs[idx]) tabs[idx].classList.add('active');
+    }
     renderHistory(days);
 }
 
@@ -716,14 +820,20 @@ function closeSubscribeModal() { document.getElementById('subscribeModal').class
 async function subscribe() {
     const email = document.getElementById('subscribeEmail').value.trim();
     const msg = document.getElementById('subscribeMsg');
-    if (!email || !email.includes('@')) { msg.style.color = '#dc3545'; msg.textContent = 'Please enter a valid email.'; return; }
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) { msg.style.color = '#dc3545'; msg.textContent = 'Please enter a valid email.'; return; }
     try {
         const r = await fetch(API_BASE + '/subscribers', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
         });
         const data = await r.json();
-        if (r.ok) { msg.style.color = '#3bd671'; msg.textContent = 'Subscribed successfully!'; document.getElementById('subscribeEmail').value = ''; }
+        if (r.ok) {
+            msg.style.color = '#3bd671';
+            msg.textContent = 'Subscribed successfully! Closing...';
+            document.getElementById('subscribeEmail').value = '';
+            setTimeout(() => closeSubscribeModal(), 900);
+        }
         else { msg.style.color = '#dc3545'; msg.textContent = data.error || 'Failed to subscribe'; }
     } catch(e) { msg.style.color = '#dc3545'; msg.textContent = 'Network error'; }
 }
@@ -732,7 +842,7 @@ function esc(s) { const d = document.createElement('div'); d.textContent = s; re
 
 async function renderFromSnapshot() {
     await loadSettings();
-    await Promise.all([
+    const results = await Promise.allSettled([
         loadStatus(),
         loadComponents(),
         loadActiveIncidents(),
@@ -740,21 +850,51 @@ async function renderFromSnapshot() {
         // loadUptime(),
         loadAllIncidents()
     ]);
+    results.forEach((r, i) => {
+        if (r.status === 'rejected') console.error(`renderFromSnapshot task ${i} failed:`, r.reason);
+    });
     renderHistory(currentHistoryDays);
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────
-async function init() {
-    const snapshot = await refreshPublicSnapshot();
-    if (!snapshot) await resolveProjectViaApi();
+const INIT_TIMEOUT_MS = 15000;
 
-    await renderFromSnapshot();
+function showLoadError() {
+    const container = document.getElementById('componentsContainer');
+    if (container) {
+        container.innerHTML = '<div class="load-error" style="text-align:center;padding:40px 20px;">' +
+            '<div style="font-size:24px;margin-bottom:12px">⚠️</div>' +
+            '<h3 style="font-size:16px;font-weight:600;margin-bottom:8px;color:var(--text-primary)">Unable to load status data</h3>' +
+            '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">We\'re having trouble connecting. Please try again shortly.</p>' +
+            '<button onclick="location.reload()" style="padding:8px 20px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#fff;cursor:pointer;font-size:13px;font-weight:500">Retry</button>' +
+            '</div>';
+    }
+}
+
+async function init() {
+    try {
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), INIT_TIMEOUT_MS));
+        const loadPromise = (async () => {
+            const snapshot = await refreshPublicSnapshot();
+            if (!snapshot) await resolveProjectViaApi();
+            await renderFromSnapshot();
+        })();
+        await Promise.race([loadPromise, timeoutPromise]);
+    } catch (e) {
+        console.error('Failed to initialize status page:', e);
+        showLoadError();
+        return;
+    }
 
     // Auto-refresh only when Firestore realtime is not available.
     if (DATA_SOURCE !== 'firestore') {
         setInterval(async () => {
-            await refreshPublicSnapshot();
-            await renderFromSnapshot();
+            try {
+                await refreshPublicSnapshot();
+                await renderFromSnapshot();
+            } catch (e) {
+                console.warn('Auto-refresh failed:', e);
+            }
         }, 60000);
     }
 }

@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - 3E Elite Status</title>
-    <link rel="icon" href="/assets/brand/Elite-Logo-01.png" type="image/png">
-    <link rel="apple-touch-icon" href="/assets/brand/Elite-Logo-01.png">
+    <link id="adminFavicon" rel="icon" href="/assets/brand/Elite-Logo-01.png" type="image/png">
+    <link id="adminAppleIcon" rel="apple-touch-icon" href="/assets/brand/Elite-Logo-01.png">
     <meta property="og:title" content="3E Elite Status Admin">
     <meta property="og:description" content="Manage status, incidents, and uptime.">
-    <meta property="og:image" content="/assets/brand/Elite-Logo-01.png">
+    <meta id="adminOgImage" property="og:image" content="/assets/brand/Elite-Logo-01.png">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:image" content="/assets/brand/Elite-Logo-01.png">
+    <meta id="adminTwitterImage" name="twitter:image" content="/assets/brand/Elite-Logo-01.png">
     <link rel="stylesheet" href="/theme.css">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
@@ -179,8 +179,27 @@
         .logo-preview{max-height:64px;max-width:220px;object-fit:contain;margin:0 auto 10px;display:block}
         .logo-drop-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}
 
+        /* Skip nav */
+        .skip-nav{position:absolute;top:-40px;left:0;background:var(--brand-primary);color:#fff;padding:8px 16px;z-index:200;transition:top .2s}
+        .skip-nav:focus{top:0}
+
+        /* Hamburger */
+        .hamburger{display:none;background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px;margin-right:8px;color:var(--text-primary);line-height:1}
+
+        /* Button loading */
+        .btn[disabled],.btn.btn-loading{opacity:.55;pointer-events:none;cursor:not-allowed}
+        .btn.btn-loading::after{content:'';display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:btn-spin .6s linear infinite;margin-left:6px}
+        @keyframes btn-spin{to{transform:rotate(360deg)}}
+
+        /* Focus visible */
+        :focus-visible{outline:2px solid var(--brand-primary);outline-offset:2px}
+
         @media(max-width:768px){
-            .sidebar{display:none}
+            .sidebar{display:none;position:fixed;top:0;left:0;width:260px;height:100vh;z-index:60}
+            .sidebar.open{display:flex}
+            .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:55}
+            .sidebar-backdrop.open{display:block}
+            .hamburger{display:inline-flex}
             .main{margin-left:0}
             .topbar{padding:12px 16px}
             .content{padding:16px}
@@ -196,15 +215,48 @@
             .modal{width:95%;max-height:95vh}
             .form-group .check-group{flex-direction:column;align-items:flex-start}
         }
+
+        /* ── Dark mode overrides ─────────────────────────────────────── */
+        @media(prefers-color-scheme:dark){
+            .topbar{background:var(--surface-elevated)}
+            .project-select{background:var(--surface-elevated);color:var(--text-primary)}
+            .card{background:var(--surface-elevated)}
+            .stat{background:var(--surface-elevated)}
+            .btn-secondary{background:var(--surface-elevated)}
+            .table td{border-bottom-color:var(--border)}
+            .table tr:hover td{background:rgba(255,255,255,.03)}
+            .tree-node{border-bottom-color:var(--border)}
+            .modal{background:var(--surface-elevated)}
+            .timeline-dot{background:var(--surface-elevated);border-color:var(--border)}
+            .timeline-msg{color:var(--text-primary)}
+            .settings-tab{background:var(--surface-elevated)}
+            .analytics-card{background:var(--surface-elevated)}
+            .analytics-card .label{color:var(--text-secondary)}
+            .analytics-card .value{color:var(--text-primary)}
+            .daily-analytics-table th,.daily-analytics-table td{border-bottom-color:var(--border)}
+            .activity-list{background:var(--surface-elevated)}
+            .activity-item{border-bottom-color:var(--border)}
+            .activity-summary{color:var(--text-primary)}
+            .activity-meta{color:var(--text-secondary)}
+            .logo-drop{background:var(--surface-elevated);border-color:var(--border)}
+            .logo-drop:hover{background:var(--surface)}
+            .form-group .check-item{background:var(--surface)}
+            .field-help{color:var(--text-secondary)}
+            .form-group input,.form-group select,.form-group textarea{background:var(--surface);color:var(--text-primary);border-color:var(--border)}
+            .sidebar{background:var(--surface-elevated)}
+        }
     </style>
 </head>
 <body>
+<noscript><p style="padding:40px;text-align:center">JavaScript is required to use the admin panel.</p></noscript>
 
+<a href="#main-content" class="skip-nav">Skip to content</a>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 <div class="app">
     <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-brand">
-            <img class="brand-logo mark" src="/assets/brand/Elite-Logo-01.png" alt="Elite">
+            <img id="adminSidebarLogo" class="brand-logo mark" src="/assets/brand/Elite-Logo-01.png" alt="Elite">
             <span>3E Elite Status</span>
         </div>
         <div class="sidebar-tools">
@@ -218,16 +270,16 @@
             </div>
             <div class="nav-section">
                 <div class="nav-label">Manage</div>
-                <div class="nav-item" data-tab="components" onclick="showTab('components')"><span class="icon">&#9881;</span> Components</div>
-                <div class="nav-item" data-tab="incidents" onclick="showTab('incidents')"><span class="icon">&#9888;</span> Incidents</div>
-                <div class="nav-item" data-tab="maintenance" onclick="showTab('maintenance')"><span class="icon">&#128736;</span> Maintenance</div>
-                <div class="nav-item" data-tab="subscribers" onclick="showTab('subscribers')"><span class="icon">&#9993;</span> Subscribers</div>
+                <div class="nav-item" data-tab="components" onclick="showTab('components')" tabindex="0" role="button"><span class="icon">&#9881;</span> Components</div>
+                <div class="nav-item" data-tab="incidents" onclick="showTab('incidents')" tabindex="0" role="button"><span class="icon">&#9888;</span> Incidents</div>
+                <div class="nav-item" data-tab="maintenance" onclick="showTab('maintenance')" tabindex="0" role="button"><span class="icon">&#128736;</span> Maintenance</div>
+                <div class="nav-item" data-tab="subscribers" onclick="showTab('subscribers')" tabindex="0" role="button"><span class="icon">&#9993;</span> Subscribers</div>
             </div>
             <div class="nav-section">
                 <div class="nav-label">Configure</div>
-                <div class="nav-item" data-tab="projects" onclick="showTab('projects')"><span class="icon">&#128193;</span> Projects</div>
-                <div class="nav-item" data-tab="users" onclick="showTab('users')"><span class="icon">&#128101;</span> Users</div>
-                <div class="nav-item" data-tab="settings" onclick="showTab('settings')"><span class="icon">&#9881;</span> Settings</div>
+                <div class="nav-item" data-tab="projects" onclick="showTab('projects')" tabindex="0" role="button"><span class="icon">&#128193;</span> Projects</div>
+                <div class="nav-item" data-tab="users" onclick="showTab('users')" tabindex="0" role="button"><span class="icon">&#128101;</span> Users</div>
+                <div class="nav-item" data-tab="settings" onclick="showTab('settings')" tabindex="0" role="button"><span class="icon">&#9881;</span> Settings</div>
             </div>
         </nav>
         <div class="sidebar-footer">
@@ -241,15 +293,18 @@
         </div>
     </aside>
 
-    <div class="main">
+    <div class="main" role="main">
         <div class="topbar">
-            <div class="topbar-title" id="pageTitle">Dashboard</div>
+            <div style="display:flex;align-items:center">
+                <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Open navigation menu">&#9776;</button>
+                <div class="topbar-title" id="pageTitle">Dashboard</div>
+            </div>
             <div class="topbar-actions">
                 <button class="btn btn-secondary" onclick="logout()">Logout</button>
             </div>
         </div>
 
-        <div class="content">
+        <div class="content" id="main-content">
             <!-- Dashboard -->
             <div class="tab-page active" id="tab-dashboard">
                 <div class="stats" id="statsGrid"></div>
@@ -271,10 +326,13 @@
             <div class="tab-page" id="tab-components">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
                     <h2 style="font-size:16px">Components</h2>
-                    <div style="display:flex;gap:8px">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <label for="componentScopeSelect" style="font-size:12px;color:#7a869a;font-weight:600">Scope</label>
+                    <select id="componentScopeSelect" class="project-select" style="min-width:220px" onchange="onComponentScopeChange(this.value)"></select>
                     <button class="btn btn-primary" id="componentsAddBtn" onclick="openComponentModal()">+ Component</button>
                     </div>
                 </div>
+                <div id="componentScopeNote" class="field-help" style="margin-bottom:10px">Components are managed for the selected scope.</div>
                 <div class="card" style="margin-bottom:16px">
                     <div class="card-head"><h3>Components Settings</h3></div>
                     <div class="card-body">
@@ -296,6 +354,13 @@
                     <h2 style="font-size:16px">Incidents</h2>
                     <button class="btn btn-primary" id="incidentsAddBtn" onclick="openIncidentModal()">+ Create Incident</button>
                 </div>
+                <div class="card">
+                    <div class="card-head">
+                        <h3>Incident Templates</h3>
+                        <button class="btn btn-secondary" id="incidentTemplateAddBtn" onclick="openIncidentTemplateModal()">+ New Template</button>
+                    </div>
+                    <div class="card-body" id="incidentTemplatesList"></div>
+                </div>
                 <div id="incidentsList"></div>
             </div>
 
@@ -305,6 +370,13 @@
                     <h2 style="font-size:16px">Scheduled Maintenance</h2>
                     <button class="btn btn-primary" id="maintenanceAddBtn" onclick="openMaintenanceModal()">+ Schedule Maintenance</button>
                 </div>
+                <div class="card">
+                    <div class="card-head">
+                        <h3>Maintenance Templates</h3>
+                        <button class="btn btn-secondary" id="maintenanceTemplateAddBtn" onclick="openMaintenanceTemplateModal()">+ New Template</button>
+                    </div>
+                    <div class="card-body" id="maintenanceTemplatesList"></div>
+                </div>
                 <div id="maintenanceList"></div>
             </div>
 
@@ -312,6 +384,10 @@
             <div class="tab-page" id="tab-subscribers">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
                     <h2 style="font-size:16px">Subscribers</h2>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-secondary" id="subscribersImportBtn" onclick="openImportSubscribersModal()">Import Emails</button>
+                        <button class="btn btn-secondary" id="subscribersExportBtn" onclick="openExportSubscribersModal()">Export Emails</button>
+                    </div>
                 </div>
                 <div id="subscribersList"></div>
             </div>
@@ -321,6 +397,39 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
                     <h2 style="font-size:16px">Projects</h2>
                     <button class="btn btn-primary" id="projectsAddBtn" onclick="openProjectModal()">+ New Project</button>
+                </div>
+                <div class="card">
+                    <div class="card-head"><h3>Project View Mode</h3></div>
+                    <div class="card-body">
+                        <div id="projectViewTargetHint" class="field-help" style="margin-bottom:12px"></div>
+                        <div class="settings-grid">
+                            <div class="form-group">
+                                <label>View Mode</label>
+                                <select id="projectViewModeSelect" onchange="onProjectViewModeChange(this.value)">
+                                    <option value="single">Disabled</option>
+                                    <option value="dual">Dual View</option>
+                                    <option value="triad">Triad View</option>
+                                </select>
+                                <div class="field-help">Disabled shows only Project 1. Dual shows Project 1 + Project 2. Triad shows Project 1 + Project 2 + Project 3.</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Project 1 (Primary)</label>
+                                <select id="projectPrimarySelect" onchange="onProjectPrimaryChange(this.value)"></select>
+                                <div class="field-help">Save always updates Project 1. Incidents and maintenance also come from Project 1.</div>
+                            </div>
+                            <div class="form-group" id="projectSecondaryWrap">
+                                <label>Project 2 (Secondary)</label>
+                                <select id="projectSecondarySelect" onchange="onProjectSecondaryChange(this.value)"></select>
+                                <div class="field-help">Used for components in Dual or Triad mode. Choose Disabled to skip.</div>
+                            </div>
+                            <div class="form-group" id="projectTertiaryWrap">
+                                <label>Project 3 (Tertiary)</label>
+                                <select id="projectTertiarySelect" onchange="onProjectTertiaryChange(this.value)"></select>
+                                <div class="field-help">Used only in Triad mode. Choose Disabled to skip.</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="projectViewSaveBtn" onclick="saveProjectViewMode()">Save View Mode</button>
+                    </div>
                 </div>
                 <div id="projectsList"></div>
             </div>
@@ -348,6 +457,7 @@
                             <button type="button" class="settings-tab" id="settingsTabBtn-custom-email" onclick="showSettingsSubtab('custom-email')">Custom Email</button>
                             <button type="button" class="settings-tab" id="settingsTabBtn-analytics" onclick="showSettingsSubtab('analytics')">Analytics</button>
                             <button type="button" class="settings-tab" id="settingsTabBtn-activity-log" onclick="showSettingsSubtab('activity-log')">Activity Log</button>
+                            <button type="button" class="settings-tab" id="settingsTabBtn-admin-panel" onclick="showSettingsSubtab('admin-panel')">Admin Panel</button>
                         </div>
                         <form id="settingsForm">
                             <div class="settings-subpage active" id="settings-subtab-page-info">
@@ -425,6 +535,37 @@
                                     <div class="field-help">One domain per line (or comma-separated). Each will redirect to the custom domain.</div>
                                 </div>
                                 <div class="form-group">
+                                    <label>Automation Provider</label>
+                                    <select id="setDomainAutomationProvider">
+                                        <option value="firebase_hosting">Firebase Hosting</option>
+                                        <option value="manual">Manual</option>
+                                    </select>
+                                    <div class="field-help">Use Firebase Hosting automation to create domain mappings and managed SSL.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Registrar</label>
+                                    <input type="text" id="setDomainRegistrar" placeholder="GoDaddy, Namecheap, Cloudflare Registrar">
+                                    <div class="field-help">Required when a custom domain is set.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>DNS Provider</label>
+                                    <input type="text" id="setDnsProvider" placeholder="Cloudflare, Route 53, Cloud DNS">
+                                    <div class="field-help">Required when a custom domain is set.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Domain Contact Email</label>
+                                    <input type="email" id="setDomainContactEmail" placeholder="dns-admin@example.com">
+                                    <div class="field-help">Required for ownership and certificate coordination.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>DNS Account / Team ID</label>
+                                    <input type="text" id="setDnsProviderAccountId" placeholder="Optional account or team reference">
+                                </div>
+                                <div class="form-group">
+                                    <label>DNS Zone</label>
+                                    <input type="text" id="setDnsProviderZone" placeholder="example-com">
+                                </div>
+                                <div class="form-group">
                                     <label>Publish URL</label>
                                     <div id="publishUrlPreview" style="font-size:13px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#f7f8f9;color:#253858"></div>
                                 </div>
@@ -440,6 +581,11 @@
                                 <div class="form-group">
                                     <button type="button" class="btn btn-secondary" onclick="validateProjectDomains()">Validate DNS</button>
                                     <div id="dnsValidationResults" style="margin-top:10px;font-size:12px;color:#42526e;background:#f7f8f9;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px">Validation not run yet.</div>
+                                </div>
+                                <div class="form-group" style="grid-column:1/-1">
+                                    <button type="button" class="btn btn-secondary" onclick="provisionProjectDomains()">Provision in Firebase Hosting</button>
+                                    <button type="button" class="btn btn-secondary" onclick="loadDomainProvisionStatus()" style="margin-left:8px">Refresh Provision Status</button>
+                                    <div id="domainProvisionResults" style="margin-top:10px;font-size:12px;color:#42526e;background:#f7f8f9;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px">Provisioning not run yet.</div>
                                 </div>
                             </div>
 
@@ -488,6 +634,27 @@
                                         <label>Effective sender</label>
                                         <input type="text" id="setEffectiveNotificationFromEmail" readonly>
                                     </div>
+                                    <div class="form-group" style="grid-column:1/-1">
+                                        <label>Email Delivery Service</label>
+                                        <div id="emailServiceStatus" style="font-size:12px;color:#42526e;background:#f7f8f9;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px">Status not checked yet.</div>
+                                        <div class="field-help">Server-side SMTP config is required. Missing settings are shown here.</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Test Recipient</label>
+                                        <input type="email" id="emailTestRecipient" placeholder="you@example.com">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Test Subject</label>
+                                        <input type="text" id="emailTestSubject" placeholder="Status page test">
+                                    </div>
+                                    <div class="form-group" style="grid-column:1/-1">
+                                        <label>Test Message</label>
+                                        <textarea id="emailTestMessage" placeholder="This is a test email from our status page."></textarea>
+                                    </div>
+                                    <div class="form-group" style="grid-column:1/-1">
+                                        <button type="button" class="btn btn-secondary" onclick="loadEmailServiceStatus()">Refresh Email Status</button>
+                                        <button type="button" class="btn btn-secondary" onclick="sendTestEmail()" style="margin-left:8px">Send Test Email</button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -527,32 +694,61 @@
                                 </div>
                             </div>
 
+                            <div class="settings-subpage" id="settings-subtab-admin-panel">
+                                <div class="settings-grid">
+                                    <div class="form-group">
+                                        <label>Main page logo</label>
+                                        <div id="statusLogoDrop" class="logo-drop" onclick="triggerStatusLogoUpload()">
+                                            <img id="statusLogoPreview" class="logo-preview" src="/assets/brand/Elite-Logo-01.png" alt="Status page logo preview">
+                                            <div class="field-help">Used on public status page header/footer.</div>
+                                            <div class="logo-drop-actions">
+                                                <button type="button" class="btn btn-primary btn-sm" id="statusLogoUploadBtn" onclick="event.stopPropagation();triggerStatusLogoUpload();">Upload image</button>
+                                                <button type="button" class="btn btn-secondary btn-sm" id="statusLogoCopyFromAdminBtn" onclick="event.stopPropagation();copyAdminLogoToStatusLogo();">Copy from admin logo</button>
+                                                <button type="button" class="btn btn-secondary btn-sm" id="statusLogoResetBtn" onclick="event.stopPropagation();resetStatusPageLogo();">Reset default</button>
+                                            </div>
+                                        </div>
+                                        <input type="file" id="statusLogoFileInput" accept="image/*" style="display:none">
+                                        <input type="hidden" id="setStatusPageLogoUrl">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Admin panel logo</label>
+                                        <div id="adminPanelLogoDrop" class="logo-drop" onclick="triggerAdminPanelLogoUpload()">
+                                            <img id="adminPanelLogoPreview" class="logo-preview" src="/assets/brand/Elite-Logo-01.png" alt="Admin panel logo preview">
+                                            <div class="field-help">Used on admin sidebar/footer and browser icon.</div>
+                                            <div class="logo-drop-actions">
+                                                <button type="button" class="btn btn-primary btn-sm" id="adminLogoUploadBtn" onclick="event.stopPropagation();triggerAdminPanelLogoUpload();">Upload image</button>
+                                                <button type="button" class="btn btn-secondary btn-sm" id="adminLogoCopyFromStatusBtn" onclick="event.stopPropagation();copyStatusLogoToAdminLogo();">Copy from main page logo</button>
+                                                <button type="button" class="btn btn-secondary btn-sm" id="adminLogoResetBtn" onclick="event.stopPropagation();resetAdminPanelLogo();">Reset default</button>
+                                            </div>
+                                        </div>
+                                        <input type="file" id="adminPanelLogoFileInput" accept="image/*" style="display:none">
+                                        <input type="hidden" id="setAdminPanelLogoUrl">
+                                    </div>
+                                    <div class="form-group" style="grid-column:1/-1">
+                                        <label>Disable menu items</label>
+                                        <div class="check-group">
+                                            <label class="check-item"><input type="checkbox" id="toggle-components"> Components</label>
+                                            <label class="check-item"><input type="checkbox" id="toggle-incidents"> Incidents</label>
+                                            <label class="check-item"><input type="checkbox" id="toggle-maintenance"> Maintenance</label>
+                                            <label class="check-item"><input type="checkbox" id="toggle-subscribers"> Subscribers</label>
+                                            <label class="check-item"><input type="checkbox" id="toggle-projects"> Projects</label>
+                                            <label class="check-item"><input type="checkbox" id="toggle-users"> Users</label>
+                                            <label class="check-item"><input type="checkbox" id="toggle-settings"> Settings</label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="grid-column:1/-1">
+                                        <button type="button" class="btn btn-primary" id="menuSaveBtn" onclick="saveMenuVisibility()">Save Menu Visibility</button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div style="margin-top:16px">
                             <button type="submit" class="btn btn-primary" id="settingsSaveBtn">Save Settings</button>
                             </div>
                         </form>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-head"><h3>Admin Menu Visibility</h3></div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label>Disable menu items</label>
-                            <div class="check-group">
-                                <label class="check-item"><input type="checkbox" id="toggle-components"> Components</label>
-                                <label class="check-item"><input type="checkbox" id="toggle-incidents"> Incidents</label>
-                                <label class="check-item"><input type="checkbox" id="toggle-maintenance"> Maintenance</label>
-                                <label class="check-item"><input type="checkbox" id="toggle-subscribers"> Subscribers</label>
-                                <label class="check-item"><input type="checkbox" id="toggle-projects"> Projects</label>
-                                <label class="check-item"><input type="checkbox" id="toggle-users"> Users</label>
-                                <label class="check-item"><input type="checkbox" id="toggle-settings"> Settings</label>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary" id="menuSaveBtn" onclick="saveMenuVisibility()">Save Menu Visibility</button>
-                    </div>
-                </div>
             </div>
-
         </div>
     </div>
 </div>
@@ -560,7 +756,7 @@
 <footer class="app-footer">
     <div class="footer-inner">
         <div class="brand">
-            <img class="brand-logo full" src="/assets/brand/Elite-Logo-01.png" alt="Elite Status">
+            <img id="adminFooterLogo" class="brand-logo full" src="/assets/brand/Elite-Logo-01.png" alt="Elite Status">
         </div>
         <div class="footer-links">
             <a href="/index.html">Status Home</a>
@@ -571,7 +767,7 @@
 </footer>
 
 <!-- Component Modal -->
-<div class="modal-overlay" id="componentModal">
+<div class="modal-overlay" id="componentModal" role="dialog" aria-modal="true" aria-labelledby="componentModalTitle">
     <div class="modal">
         <div class="modal-head"><h3 id="componentModalTitle">Add Component</h3><button class="modal-close" onclick="closeModal('componentModal')">&times;</button></div>
         <div class="modal-body">
@@ -599,7 +795,7 @@
 </div>
 
 <!-- Incident Modal -->
-<div class="modal-overlay" id="incidentModal">
+<div class="modal-overlay" id="incidentModal" role="dialog" aria-modal="true" aria-labelledby="incidentModalTitle">
     <div class="modal">
         <div class="modal-head"><h3>Create Incident</h3><button class="modal-close" onclick="closeModal('incidentModal')">&times;</button></div>
         <div class="modal-body">
@@ -623,9 +819,9 @@
 </div>
 
 <!-- Incident Update Modal -->
-<div class="modal-overlay" id="updateModal">
+<div class="modal-overlay" id="updateModal" role="dialog" aria-modal="true" aria-labelledby="updateModalTitle">
     <div class="modal" style="max-width:500px">
-        <div class="modal-head"><h3>Post Incident Update</h3><button class="modal-close" onclick="closeModal('updateModal')">&times;</button></div>
+        <div class="modal-head"><h3 id="updateModalTitle">Post Incident Update</h3><button class="modal-close" onclick="closeModal('updateModal')" aria-label="Close">&times;</button></div>
         <div class="modal-body">
             <div class="form-group"><label>Status</label>
                 <select id="updStatus"><option value="investigating">Investigating</option><option value="identified">Identified</option><option value="monitoring">Monitoring</option><option value="resolved">Resolved</option></select>
@@ -640,8 +836,46 @@
     </div>
 </div>
 
+<!-- Incident Template Modal -->
+<div class="modal-overlay" id="incidentTemplateModal" role="dialog" aria-modal="true" aria-labelledby="incidentTemplateModalTitle">
+    <div class="modal">
+        <div class="modal-head"><h3 id="incidentTemplateModalTitle">New Incident Template</h3><button class="modal-close" onclick="closeModal('incidentTemplateModal')">&times;</button></div>
+        <div class="modal-body">
+            <form id="incidentTemplateForm">
+                <div class="form-group"><label>Template Name</label><input type="text" id="incidentTemplateName" required placeholder="Service degradation"></div>
+                <div class="form-group"><label>Incident Title</label><input type="text" id="incidentTemplateTitle" required placeholder="Service performance degradation"></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group"><label>Default Status</label>
+                        <select id="incidentTemplateStatus">
+                            <option value="investigating">Investigating</option>
+                            <option value="identified">Identified</option>
+                            <option value="monitoring">Monitoring</option>
+                            <option value="resolved">Resolved</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Default Impact</label>
+                        <select id="incidentTemplateImpact">
+                            <option value="none">None</option>
+                            <option value="minor" selected>Minor</option>
+                            <option value="major">Major</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group"><label>Default Message</label><textarea id="incidentTemplateMessage" required placeholder="Describe what users should know..."></textarea></div>
+                <div class="form-group"><label>Default Affected Components</label><div class="check-group" id="incidentTemplateComponents"></div></div>
+                <input type="hidden" id="incidentTemplateId">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('incidentTemplateModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveIncidentTemplate()">Save Template</button>
+        </div>
+    </div>
+</div>
+
 <!-- Maintenance Modal -->
-<div class="modal-overlay" id="maintenanceModal">
+<div class="modal-overlay" id="maintenanceModal" role="dialog" aria-modal="true" aria-labelledby="maintenanceModalTitle">
     <div class="modal">
                 <div class="modal-head"><h3 id="maintenanceModalTitle">Schedule Maintenance</h3><button class="modal-close" onclick="closeModal('maintenanceModal')">&times;</button></div>
         <div class="modal-body">
@@ -663,8 +897,29 @@
     </div>
 </div>
 
+<!-- Maintenance Template Modal -->
+<div class="modal-overlay" id="maintenanceTemplateModal" role="dialog" aria-modal="true" aria-labelledby="maintenanceTemplateModalTitle">
+    <div class="modal">
+        <div class="modal-head"><h3 id="maintenanceTemplateModalTitle">New Maintenance Template</h3><button class="modal-close" onclick="closeModal('maintenanceTemplateModal')">&times;</button></div>
+        <div class="modal-body">
+            <form id="maintenanceTemplateForm">
+                <div class="form-group"><label>Template Name</label><input type="text" id="maintenanceTemplateName" required placeholder="Weekly maintenance window"></div>
+                <div class="form-group"><label>Maintenance Title</label><input type="text" id="maintenanceTemplateTitle" required placeholder="Scheduled maintenance window"></div>
+                <div class="form-group"><label>Default Message</label><textarea id="maintenanceTemplateMessage" placeholder="Message shown when this template is used..."></textarea></div>
+                <div class="form-group"><label>Default Duration (minutes)</label><input type="number" id="maintenanceTemplateDuration" min="5" max="10080" step="1" value="60" required></div>
+                <div class="form-group"><label>Default Affected Components</label><div class="check-group" id="maintenanceTemplateComponents"></div></div>
+                <input type="hidden" id="maintenanceTemplateId">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('maintenanceTemplateModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveMaintenanceTemplate()">Save Template</button>
+        </div>
+    </div>
+</div>
+
 <!-- Project Modal -->
-<div class="modal-overlay" id="projectModal">
+<div class="modal-overlay" id="projectModal" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
     <div class="modal" style="max-width:420px">
         <div class="modal-head"><h3 id="projectModalTitle">New Project</h3><button class="modal-close" onclick="closeModal('projectModal')">&times;</button></div>
         <div class="modal-body">
@@ -682,14 +937,14 @@
 </div>
 
 <!-- User Modal -->
-<div class="modal-overlay" id="userModal">
+<div class="modal-overlay" id="userModal" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
     <div class="modal" style="max-width:420px">
         <div class="modal-head"><h3 id="userModalTitle">New User</h3><button class="modal-close" onclick="closeModal('userModal')">&times;</button></div>
         <div class="modal-body">
             <form id="userForm">
                 <div class="form-group"><label>Name</label><input type="text" id="userNameInput"></div>
                 <div class="form-group"><label>Company Email</label><input type="email" id="userEmail" required placeholder="name@company.com"></div>
-                <div class="form-group"><label>Password</label><input type="password" id="userPassword" placeholder="Set a password"></div>
+                <div class="form-group"><label>Password</label><input type="password" id="userPassword" placeholder="Set a password" minlength="12"></div>
                 <div class="form-group"><label>Role</label>
                     <select id="userRole">
                         <option value="admin">Admin</option>
@@ -707,9 +962,102 @@
     </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- Export Subscribers Modal -->
+<div class="modal-overlay" id="exportSubscribersModal" role="dialog" aria-modal="true" aria-labelledby="exportSubscribersModalTitle">
+    <div class="modal" style="max-width:520px">
+        <div class="modal-head">
+            <h3 id="exportSubscribersModalTitle">Export Subscribers</h3>
+            <button class="modal-close" onclick="closeModal('exportSubscribersModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:13px;color:#7a869a;margin-bottom:14px">Export customer subscribers from this project. Only email subscribers are included.</p>
+            <div class="settings-grid" style="grid-template-columns:1fr 1fr">
+                <div class="form-group">
+                    <label>Subscriber mode</label>
+                    <label class="check-item"><input type="checkbox" checked disabled> Email</label>
+                    <div class="field-help">SMS and webhook exports are disabled.</div>
+                </div>
+                <div class="form-group">
+                    <label>Export format</label>
+                    <label class="check-item"><input type="radio" name="subscriberExportFormat" value="csv" checked> CSV</label>
+                    <label class="check-item"><input type="radio" name="subscriberExportFormat" value="json"> JSON</label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('exportSubscribersModal')">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="exportSubscribers()">Export subscribers</button>
+        </div>
+    </div>
+</div>
+
+<!-- Import Subscribers Modal -->
+<div class="modal-overlay" id="importSubscribersModal" role="dialog" aria-modal="true" aria-labelledby="importSubscribersModalTitle">
+    <div class="modal" style="max-width:560px">
+        <div class="modal-head">
+            <h3 id="importSubscribersModalTitle">Import Subscribers</h3>
+            <button class="modal-close" onclick="closeModal('importSubscribersModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:13px;color:#7a869a;margin-bottom:14px">Import email subscribers from CSV or JSON exported by a previous application.</p>
+            <div class="form-group">
+                <label>Selected file</label>
+                <div id="subscriberImportFileName" style="font-size:13px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#f7f8f9;color:#253858">No file selected.</div>
+            </div>
+            <div class="form-group checkbox-row">
+                <input type="checkbox" id="subscriberImportReplace" style="width:auto">
+                <label for="subscriberImportReplace" style="margin:0">Replace existing email subscribers</label>
+            </div>
+            <div class="field-help">Only valid, unique email addresses will be imported.</div>
+            <input type="file" id="subscriberImportFileInput" accept=".csv,.json,text/csv,application/json" style="display:none">
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('importSubscribersModal')">Cancel</button>
+            <button type="button" class="btn btn-secondary" onclick="triggerSubscriberImportFile()">Choose File</button>
+            <button type="button" class="btn btn-primary" onclick="importSubscribers()">Import</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
+// ── Mobile sidebar toggle ─────────────────────────────────────────────────
+function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('open');
+    document.getElementById('sidebarBackdrop').classList.toggle('open');
+}
+function closeSidebar() {
+    document.querySelector('.sidebar').classList.remove('open');
+    document.getElementById('sidebarBackdrop').classList.remove('open');
+}
+
+// ── Keyboard activation for nav items and interactive divs ────────────────
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+        const el = document.activeElement;
+        if (el && el.getAttribute('role') === 'button' && el.onclick) {
+            e.preventDefault();
+            el.click();
+        }
+    }
+});
+
+// ── Button loading helper ─────────────────────────────────────────────────
+async function withLoading(btn, asyncFn) {
+    if (!btn) return asyncFn();
+    const origText = btn.textContent;
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    try {
+        return await asyncFn();
+    } finally {
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+        btn.textContent = origText;
+    }
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────
 let API = localStorage.getItem('statusPageApiBase') || '';
 if (!API && window.location.protocol === 'file:') {
@@ -720,7 +1068,13 @@ const headers = () => ({ 'Content-Type': 'application/json' });
 async function api(method, url, body) {
     const opts = { method, headers: headers(), credentials: 'same-origin' };
     if (body) opts.body = JSON.stringify(body);
-    const r = await fetch(API + url, opts);
+    let r;
+    try {
+        r = await fetch(API + url, opts);
+    } catch (e) {
+        toast('Network error: ' + (e.message || 'request failed'));
+        throw e;
+    }
     const contentType = r.headers.get('content-type') || '';
     if (r.status === 401) { localStorage.removeItem('statusPageUser'); window.location.href = '/login.html'; return; }
     if (!contentType.includes('application/json')) {
@@ -750,12 +1104,24 @@ async function logout() {
 let currentUserRole = 'viewer';
 function canEdit() { return currentUserRole === 'admin' || currentUserRole === 'editor'; }
 function isAdmin() { return currentUserRole === 'admin'; }
+function isTabHiddenForCurrentUser(tabName) {
+    if (!tabName) return false;
+    if (!isAdmin() && tabName === 'users') return true;
+    if (!isAdmin() && disabledTabs && disabledTabs[tabName]) return true;
+    return false;
+}
+const DEFAULT_BRAND_LOGO_URL = '/assets/brand/Elite-Logo-01.png';
 
 // ── Projects ─────────────────────────────────────────────────────────────
 let projects = [];
 let currentProjectId = null;
 let currentProjectSlug = '';
 let currentProjectCustomDomain = '';
+let dualDisplayMode = 'single';
+let dualSecondaryProjectId = null;
+let dualTertiaryProjectId = null;
+let activeComponentProjectId = null;
+let projectViewConfig = { mode: 'single', primaryProjectId: null, secondaryProjectId: null, tertiaryProjectId: null };
 const projectSelect = document.getElementById('projectSelect');
 const projectForm = document.getElementById('projectForm');
 
@@ -767,6 +1133,15 @@ projectForm.addEventListener('submit', (e) => {
 function projectPath(path) {
     if (!currentProjectId) return path;
     return '/api/v1/admin/projects/' + currentProjectId + path;
+}
+
+function adminProjectPath(projectId, path) {
+    if (!projectId) return path;
+    return '/api/v1/admin/projects/' + projectId + path;
+}
+
+function componentProjectPath(path) {
+    return adminProjectPath(activeComponentProjectId || currentProjectId, path);
 }
 
 function normalizeDomainInput(value) {
@@ -812,6 +1187,177 @@ function renderDomainValidation(result) {
     }).join('');
 }
 
+function renderDomainProvisionResults(payload) {
+    const panel = document.getElementById('domainProvisionResults');
+    if (!panel) return;
+    if (!payload) {
+        panel.innerHTML = '<div style="color:#7a869a">No provisioning data available.</div>';
+        return;
+    }
+    if (payload.error) {
+        panel.innerHTML = `<div style="color:#bf2600">${esc(payload.error)}</div>`;
+        return;
+    }
+    const results = Array.isArray(payload.results) ? payload.results : [];
+    if (!results.length) {
+        panel.innerHTML = '<div style="color:#7a869a">No domain mappings found yet.</div>';
+        return;
+    }
+    const sections = results.map((item) => {
+        if (item.error) {
+            return `<div style="padding:8px 0;border-bottom:1px solid #ebecf0">
+                <div><strong>${esc(item.domain || '-')}</strong> <span style="color:#bf2600;font-weight:600">ERROR</span></div>
+                <div style="margin-top:4px;color:#bf2600">${esc(item.error)}</div>
+            </div>`;
+        }
+        const active = item.hostState === 'HOST_ACTIVE' && item.ownershipState === 'OWNERSHIP_ACTIVE' && (!item.certificateState || item.certificateState === 'CERT_ACTIVE');
+        const color = active ? '#0b875b' : '#b38600';
+        const desired = item.dns && Array.isArray(item.dns.desired) ? item.dns.desired : [];
+        const desiredText = desired.length
+            ? desired.map((r) => `${r.type || '?'} ${r.name || '?'} -> ${r.rdata || '?'} (${r.requiredAction || ''})`).join(' | ')
+            : '-';
+        const issues = Array.isArray(item.issues) && item.issues.length ? item.issues.join(' | ') : '-';
+        return `<div style="padding:8px 0;border-bottom:1px solid #ebecf0">
+            <div><strong>${esc(item.domain || '-')}</strong> <span style="color:${color};font-weight:600">${active ? 'ACTIVE' : 'PENDING'}</span></div>
+            <div style="margin-top:4px">Host: ${esc(item.hostState || '-')} | Ownership: ${esc(item.ownershipState || '-')} | SSL: ${esc(item.certificateState || '-')}</div>
+            <div style="margin-top:4px">Desired DNS: ${esc(desiredText)}</div>
+            <div style="margin-top:4px">Issues: ${esc(issues)}</div>
+        </div>`;
+    });
+    const actions = Array.isArray(payload.nextActions) && payload.nextActions.length
+        ? `<div style="margin-top:8px;color:#42526e"><strong>Next:</strong> ${esc(payload.nextActions.join(' | '))}</div>`
+        : '';
+    panel.innerHTML = sections.join('') + actions;
+}
+
+async function loadDomainProvisionStatus() {
+    const panel = document.getElementById('domainProvisionResults');
+    if (panel) panel.textContent = 'Loading provisioning status...';
+    const result = await api('GET', projectPath('/domain-provision-status'));
+    renderDomainProvisionResults(result);
+}
+
+async function provisionProjectDomains() {
+    if (!requireEdit()) return;
+    const panel = document.getElementById('domainProvisionResults');
+    if (panel) panel.textContent = 'Provisioning custom domains in Firebase Hosting...';
+    const result = await api('POST', projectPath('/domain-provision'), {});
+    renderDomainProvisionResults(result);
+    if (result && result.error) {
+        toast(result.error);
+        return;
+    }
+    toast('Domain provisioning request completed');
+}
+
+function normalizedLogoUrl(value) {
+    return String(value || '').trim() || DEFAULT_BRAND_LOGO_URL;
+}
+
+function applyAdminPanelBranding() {
+    const logo = normalizedLogoUrl(document.getElementById('setAdminPanelLogoUrl') ? document.getElementById('setAdminPanelLogoUrl').value : '');
+    ['adminSidebarLogo', 'adminFooterLogo'].forEach((id) => {
+        const img = document.getElementById(id);
+        if (img) img.src = logo;
+    });
+    const favicon = document.getElementById('adminFavicon');
+    if (favicon) favicon.setAttribute('href', logo);
+    const apple = document.getElementById('adminAppleIcon');
+    if (apple) apple.setAttribute('href', logo);
+    const og = document.getElementById('adminOgImage');
+    if (og) og.setAttribute('content', logo);
+    const twitter = document.getElementById('adminTwitterImage');
+    if (twitter) twitter.setAttribute('content', logo);
+}
+
+function renderStatusLogoPreview() {
+    const img = document.getElementById('statusLogoPreview');
+    const value = normalizedLogoUrl(document.getElementById('setStatusPageLogoUrl').value);
+    if (img) img.src = value;
+}
+
+function renderAdminPanelLogoPreview() {
+    const img = document.getElementById('adminPanelLogoPreview');
+    const value = normalizedLogoUrl(document.getElementById('setAdminPanelLogoUrl').value);
+    if (img) img.src = value;
+    applyAdminPanelBranding();
+}
+
+function triggerStatusLogoUpload() {
+    const input = document.getElementById('statusLogoFileInput');
+    if (input) input.click();
+}
+
+function triggerAdminPanelLogoUpload() {
+    const input = document.getElementById('adminPanelLogoFileInput');
+    if (input) input.click();
+}
+
+function setStatusLogoFromFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        document.getElementById('setStatusPageLogoUrl').value = String(reader.result || '');
+        renderStatusLogoPreview();
+    };
+    reader.readAsDataURL(file);
+}
+
+function setAdminPanelLogoFromFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        document.getElementById('setAdminPanelLogoUrl').value = String(reader.result || '');
+        renderAdminPanelLogoPreview();
+    };
+    reader.readAsDataURL(file);
+}
+
+function copyStatusLogoToAdminLogo() {
+    document.getElementById('setAdminPanelLogoUrl').value = normalizedLogoUrl(document.getElementById('setStatusPageLogoUrl').value);
+    renderAdminPanelLogoPreview();
+}
+
+function copyAdminLogoToStatusLogo() {
+    document.getElementById('setStatusPageLogoUrl').value = normalizedLogoUrl(document.getElementById('setAdminPanelLogoUrl').value);
+    renderStatusLogoPreview();
+}
+
+function resetStatusPageLogo() {
+    document.getElementById('setStatusPageLogoUrl').value = DEFAULT_BRAND_LOGO_URL;
+    renderStatusLogoPreview();
+}
+
+function resetAdminPanelLogo() {
+    document.getElementById('setAdminPanelLogoUrl').value = DEFAULT_BRAND_LOGO_URL;
+    renderAdminPanelLogoPreview();
+}
+
+function bindLogoDropTarget(input, drop, onFile) {
+    if (!input || !drop) return;
+    input.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) onFile(file);
+        input.value = '';
+    });
+    ['dragenter', 'dragover'].forEach((evt) => {
+        drop.addEventListener(evt, (e) => {
+            e.preventDefault();
+            drop.style.borderColor = 'var(--brand-primary)';
+        });
+    });
+    ['dragleave', 'drop'].forEach((evt) => {
+        drop.addEventListener(evt, (e) => {
+            e.preventDefault();
+            drop.style.borderColor = 'rgba(9,30,66,.3)';
+        });
+    });
+    drop.addEventListener('drop', (e) => {
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) onFile(file);
+    });
+}
+
 function renderEmailLogoPreview() {
     const img = document.getElementById('emailLogoPreview');
     const placeholder = document.getElementById('emailLogoPlaceholder');
@@ -844,7 +1390,7 @@ function setEmailLogoFromFile(file) {
 }
 
 function copyLogoFromStatusPage() {
-    document.getElementById('setNotificationLogoUrl').value = '/assets/brand/Elite-Logo-01.png';
+    document.getElementById('setNotificationLogoUrl').value = normalizedLogoUrl(document.getElementById('setStatusPageLogoUrl').value);
     document.getElementById('setNotificationUseStatusLogo').checked = true;
     renderEmailLogoPreview();
 }
@@ -859,27 +1405,22 @@ function initEmailLogoUpload() {
     const drop = document.getElementById('emailLogoDrop');
     if (!input || !drop || input.dataset.bound === '1') return;
     input.dataset.bound = '1';
-    input.addEventListener('change', (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) setEmailLogoFromFile(file);
-        input.value = '';
-    });
-    ['dragenter', 'dragover'].forEach((evt) => {
-        drop.addEventListener(evt, (e) => {
-            e.preventDefault();
-            drop.style.borderColor = 'var(--brand-primary)';
-        });
-    });
-    ['dragleave', 'drop'].forEach((evt) => {
-        drop.addEventListener(evt, (e) => {
-            e.preventDefault();
-            drop.style.borderColor = 'rgba(9,30,66,.3)';
-        });
-    });
-    drop.addEventListener('drop', (e) => {
-        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-        if (file) setEmailLogoFromFile(file);
-    });
+    bindLogoDropTarget(input, drop, setEmailLogoFromFile);
+}
+
+function initBrandLogoUpload() {
+    const statusInput = document.getElementById('statusLogoFileInput');
+    const statusDrop = document.getElementById('statusLogoDrop');
+    if (statusInput && statusDrop && statusInput.dataset.bound !== '1') {
+        statusInput.dataset.bound = '1';
+        bindLogoDropTarget(statusInput, statusDrop, setStatusLogoFromFile);
+    }
+    const adminInput = document.getElementById('adminPanelLogoFileInput');
+    const adminDrop = document.getElementById('adminPanelLogoDrop');
+    if (adminInput && adminDrop && adminInput.dataset.bound !== '1') {
+        adminInput.dataset.bound = '1';
+        bindLogoDropTarget(adminInput, adminDrop, setAdminPanelLogoFromFile);
+    }
 }
 
 function publishUrlForCurrentProject() {
@@ -910,6 +1451,295 @@ function updateViewLink() {
     link.href = publishUrlForCurrentProject();
 }
 
+function currentProjectRecord() {
+    return projects.find((p) => p.id === currentProjectId) || null;
+}
+
+function componentScopeLabel(projectId) {
+    const p = projects.find((item) => item.id === projectId);
+    return p ? p.name : ('Project ' + projectId);
+}
+
+function updateProjectViewTargetHint() {
+    const hint = document.getElementById('projectViewTargetHint');
+    if (!hint) return;
+    const current = currentProjectRecord();
+    const primary = projects.find((p) => p.id === projectViewConfig.primaryProjectId) || null;
+    if (!projects.length || !current || !primary) {
+        hint.textContent = 'Select a project to configure its view mode.';
+        hint.style.color = '';
+        return;
+    }
+    if (current.id === primary.id) {
+        hint.textContent = `Editing view mode for "${current.name}".`;
+        hint.style.color = '';
+        return;
+    }
+    hint.textContent = `You are on "${current.name}", but Save will update "${primary.name}" because Project 1 is set to it.`;
+    hint.style.color = '#b35b00';
+}
+
+function renderProjectViewModeControls() {
+    const modeSelect = document.getElementById('projectViewModeSelect');
+    const primarySelect = document.getElementById('projectPrimarySelect');
+    const secondarySelect = document.getElementById('projectSecondarySelect');
+    const tertiarySelect = document.getElementById('projectTertiarySelect');
+    const secondaryWrap = document.getElementById('projectSecondaryWrap');
+    const tertiaryWrap = document.getElementById('projectTertiaryWrap');
+    if (!modeSelect || !primarySelect || !secondarySelect || !tertiarySelect || !secondaryWrap || !tertiaryWrap) return;
+
+    if (!projects.length) {
+        modeSelect.value = 'single';
+        primarySelect.innerHTML = '<option value="">No projects</option>';
+        secondarySelect.innerHTML = '<option value="">No projects</option>';
+        tertiarySelect.innerHTML = '<option value="">No projects</option>';
+        primarySelect.disabled = true;
+        secondarySelect.disabled = true;
+        tertiarySelect.disabled = true;
+        updateProjectViewTargetHint();
+        return;
+    }
+
+    const primaryId = (projectViewConfig.primaryProjectId && projects.find((p) => p.id === projectViewConfig.primaryProjectId))
+        ? projectViewConfig.primaryProjectId
+        : (currentProjectId || projects[0].id);
+    projectViewConfig.primaryProjectId = primaryId;
+
+    primarySelect.disabled = false;
+    primarySelect.innerHTML = projects.map((project) =>
+        `<option value="${project.id}">${esc(project.name)}</option>`
+    ).join('');
+    primarySelect.value = String(primaryId);
+
+    const mode = ['dual', 'triad'].includes(projectViewConfig.mode) ? projectViewConfig.mode : 'single';
+    projectViewConfig.mode = mode;
+    modeSelect.value = mode;
+
+    const secondaryOptions = projects
+        .filter((project) => project.id !== primaryId)
+        .map((project) => `<option value="${project.id}">${esc(project.name)}</option>`)
+        .join('');
+    secondarySelect.innerHTML = '<option value="">Disabled</option>' + secondaryOptions;
+    const secondaryId = (projectViewConfig.secondaryProjectId && projects.find((project) => project.id === projectViewConfig.secondaryProjectId && project.id !== primaryId))
+        ? projectViewConfig.secondaryProjectId
+        : null;
+    projectViewConfig.secondaryProjectId = secondaryId;
+    secondarySelect.value = secondaryId ? String(secondaryId) : '';
+
+    const tertiaryOptions = projects
+        .filter((project) => project.id !== primaryId && project.id !== secondaryId)
+        .map((project) => `<option value="${project.id}">${esc(project.name)}</option>`)
+        .join('');
+    tertiarySelect.innerHTML = '<option value="">Disabled</option>' + tertiaryOptions;
+    const tertiaryId = (projectViewConfig.tertiaryProjectId && projects.find((project) => project.id === projectViewConfig.tertiaryProjectId && project.id !== primaryId && project.id !== secondaryId))
+        ? projectViewConfig.tertiaryProjectId
+        : null;
+    projectViewConfig.tertiaryProjectId = tertiaryId;
+    tertiarySelect.value = tertiaryId ? String(tertiaryId) : '';
+
+    const isDual = mode === 'dual';
+    const isTriad = mode === 'triad';
+    secondaryWrap.style.display = (isDual || isTriad) ? '' : 'none';
+    tertiaryWrap.style.display = isTriad ? '' : 'none';
+    secondarySelect.disabled = !(isDual || isTriad);
+    tertiarySelect.disabled = !isTriad;
+    secondarySelect.setCustomValidity('');
+    tertiarySelect.setCustomValidity('');
+    updateProjectViewTargetHint();
+}
+
+function onProjectViewModeChange(value) {
+    projectViewConfig.mode = value === 'triad' ? 'triad' : (value === 'dual' ? 'dual' : 'single');
+    if (projectViewConfig.mode === 'single') {
+        projectViewConfig.secondaryProjectId = null;
+        projectViewConfig.tertiaryProjectId = null;
+    }
+    if (projectViewConfig.mode === 'dual') {
+        projectViewConfig.tertiaryProjectId = null;
+    }
+    renderProjectViewModeControls();
+}
+
+async function onProjectPrimaryChange(value) {
+    const primaryId = parseInt(value, 10) || null;
+    if (!primaryId) return;
+    projectViewConfig.primaryProjectId = primaryId;
+    if (projectViewConfig.secondaryProjectId === primaryId) projectViewConfig.secondaryProjectId = null;
+    if (projectViewConfig.tertiaryProjectId === primaryId) projectViewConfig.tertiaryProjectId = null;
+    const settings = await api('GET', adminProjectPath(primaryId, '/settings'));
+    if (settings && !settings.error) {
+        projectViewConfig.mode = settings.displayMode === 'triad' ? 'triad' : (settings.displayMode === 'dual' ? 'dual' : 'single');
+        projectViewConfig.secondaryProjectId = parseInt(settings.secondaryProjectId, 10) || null;
+        projectViewConfig.tertiaryProjectId = parseInt(settings.tertiaryProjectId, 10) || null;
+    }
+    renderProjectViewModeControls();
+}
+
+function onProjectSecondaryChange(value) {
+    projectViewConfig.secondaryProjectId = parseInt(value, 10) || null;
+    if (projectViewConfig.tertiaryProjectId && projectViewConfig.tertiaryProjectId === projectViewConfig.secondaryProjectId) {
+        projectViewConfig.tertiaryProjectId = null;
+    }
+    renderProjectViewModeControls();
+}
+
+function onProjectTertiaryChange(value) {
+    projectViewConfig.tertiaryProjectId = parseInt(value, 10) || null;
+    renderProjectViewModeControls();
+}
+
+async function saveProjectViewMode() {
+    if (!requireEdit()) return;
+    const modeSelect = document.getElementById('projectViewModeSelect');
+    const primarySelect = document.getElementById('projectPrimarySelect');
+    const secondarySelect = document.getElementById('projectSecondarySelect');
+    const tertiarySelect = document.getElementById('projectTertiarySelect');
+    if (!modeSelect || !primarySelect || !secondarySelect || !tertiarySelect) return;
+
+    modeSelect.setCustomValidity('');
+    primarySelect.setCustomValidity('');
+    secondarySelect.setCustomValidity('');
+    tertiarySelect.setCustomValidity('');
+
+    const mode = modeSelect.value === 'triad' ? 'triad' : (modeSelect.value === 'dual' ? 'dual' : 'single');
+    const primaryId = parseInt(primarySelect.value, 10) || null;
+    const secondaryId = (mode === 'dual' || mode === 'triad') ? (parseInt(secondarySelect.value, 10) || null) : null;
+    const tertiaryId = mode === 'triad' ? (parseInt(tertiarySelect.value, 10) || null) : null;
+    if (!primaryId) {
+        primarySelect.setCustomValidity('Select Project 1');
+        primarySelect.reportValidity();
+        primarySelect.focus();
+        return;
+    }
+    if (mode === 'dual' && !secondaryId) {
+        secondarySelect.setCustomValidity('Select Project 2 for Dual View');
+        secondarySelect.reportValidity();
+        secondarySelect.focus();
+        toast('Select Project 2 for Dual View');
+        return;
+    }
+    if (mode === 'dual' && primaryId === secondaryId) {
+        secondarySelect.setCustomValidity('Project 2 must be different from Project 1');
+        secondarySelect.reportValidity();
+        secondarySelect.focus();
+        return;
+    }
+    if (mode === 'triad' && !secondaryId) {
+        secondarySelect.setCustomValidity('Select Project 2 for Triad View');
+        secondarySelect.reportValidity();
+        secondarySelect.focus();
+        toast('Select Project 2 for Triad View');
+        return;
+    }
+    if (mode === 'triad' && !tertiaryId) {
+        tertiarySelect.setCustomValidity('Select Project 3 for Triad View');
+        tertiarySelect.reportValidity();
+        tertiarySelect.focus();
+        toast('Select Project 3 for Triad View');
+        return;
+    }
+    if (mode === 'triad' && primaryId === secondaryId) {
+        secondarySelect.setCustomValidity('Project 2 must be different from Project 1');
+        secondarySelect.reportValidity();
+        secondarySelect.focus();
+        return;
+    }
+    if (mode === 'triad' && (primaryId === tertiaryId || secondaryId === tertiaryId)) {
+        tertiarySelect.setCustomValidity('Project 3 must be different from Project 1 and Project 2');
+        tertiarySelect.reportValidity();
+        tertiarySelect.focus();
+        return;
+    }
+
+    const saved = await api('PUT', adminProjectPath(primaryId, '/settings'), {
+        displayMode: mode,
+        secondaryProjectId: (mode === 'dual' || mode === 'triad') ? secondaryId : null,
+        tertiaryProjectId: mode === 'triad' ? tertiaryId : null
+    });
+    if (saved && saved.error) {
+        if (saved.fieldErrors && saved.fieldErrors.secondaryProjectId) {
+            secondarySelect.setCustomValidity(saved.fieldErrors.secondaryProjectId);
+            secondarySelect.reportValidity();
+            secondarySelect.focus();
+        } else if (saved.fieldErrors && saved.fieldErrors.tertiaryProjectId) {
+            tertiarySelect.setCustomValidity(saved.fieldErrors.tertiaryProjectId);
+            tertiarySelect.reportValidity();
+            tertiarySelect.focus();
+        }
+        toast(saved.error);
+        return;
+    }
+
+    projectViewConfig = {
+        mode: saved && saved.displayMode === 'triad' ? 'triad' : (saved && saved.displayMode === 'dual' ? 'dual' : 'single'),
+        primaryProjectId: primaryId,
+        secondaryProjectId: saved && ['dual', 'triad'].includes(saved.displayMode) ? (parseInt(saved.secondaryProjectId, 10) || null) : null,
+        tertiaryProjectId: saved && saved.displayMode === 'triad' ? (parseInt(saved.tertiaryProjectId, 10) || null) : null
+    };
+
+    if (primaryId === currentProjectId) {
+        dualDisplayMode = projectViewConfig.mode;
+        dualSecondaryProjectId = projectViewConfig.secondaryProjectId;
+        dualTertiaryProjectId = projectViewConfig.tertiaryProjectId;
+        renderDualProjectSelectors();
+        await loadComponents();
+    }
+
+    renderProjectViewModeControls();
+    toast('Project view mode saved');
+}
+
+function onDisplayModeChange(value) {
+    dualDisplayMode = value === 'triad' ? 'triad' : (value === 'dual' ? 'dual' : 'single');
+    if (dualDisplayMode === 'single') {
+        dualSecondaryProjectId = null;
+        dualTertiaryProjectId = null;
+    }
+    if (dualDisplayMode === 'dual') dualTertiaryProjectId = null;
+    renderDualProjectSelectors();
+}
+
+function componentScopeOptions() {
+    const options = [{ id: currentProjectId, role: 'primary' }];
+    if ((dualDisplayMode === 'dual' || dualDisplayMode === 'triad') && dualSecondaryProjectId && dualSecondaryProjectId !== currentProjectId) {
+        options.push({ id: dualSecondaryProjectId, role: 'secondary' });
+    }
+    if (dualDisplayMode === 'triad' && dualTertiaryProjectId && dualTertiaryProjectId !== currentProjectId && dualTertiaryProjectId !== dualSecondaryProjectId) {
+        options.push({ id: dualTertiaryProjectId, role: 'tertiary' });
+    }
+    return options;
+}
+
+function renderDualProjectSelectors() {
+    const componentScopeSelect = document.getElementById('componentScopeSelect');
+    const opts = componentScopeOptions();
+    if (componentScopeSelect) {
+        componentScopeSelect.innerHTML = opts.map((item) => {
+            const roleLabel = item.role === 'primary' ? 'Primary' : (item.role === 'secondary' ? 'Secondary' : 'Tertiary');
+            return `<option value="${item.id}">${esc(componentScopeLabel(item.id))} (${roleLabel})</option>`;
+        }).join('');
+        if (!opts.find((item) => item.id === activeComponentProjectId)) {
+            activeComponentProjectId = currentProjectId;
+        }
+        componentScopeSelect.value = String(activeComponentProjectId || currentProjectId || '');
+        componentScopeSelect.disabled = opts.length <= 1;
+    }
+    const note = document.getElementById('componentScopeNote');
+    if (note) {
+        const active = opts.find((item) => item.id === (activeComponentProjectId || currentProjectId));
+        const role = active ? active.role : 'primary';
+        note.textContent = `Components are managed for ${componentScopeLabel(activeComponentProjectId || currentProjectId)} (${role}).`;
+    }
+}
+
+async function onComponentScopeChange(value) {
+    const parsed = parseInt(value, 10);
+    if (!parsed || parsed === activeComponentProjectId) return;
+    activeComponentProjectId = parsed;
+    renderDualProjectSelectors();
+    await loadComponents();
+}
+
 async function loadProjectsList() {
     projects = await api('GET', '/api/v1/admin/projects');
     const selected = parseInt(localStorage.getItem('statusPageProjectId') || '0', 10);
@@ -917,9 +1747,14 @@ async function loadProjectsList() {
         currentProjectId = null;
         currentProjectSlug = '';
         currentProjectCustomDomain = '';
+        activeComponentProjectId = null;
         projectSelect.innerHTML = '<option value="">No projects</option>';
+        const componentScopeSelect = document.getElementById('componentScopeSelect');
+        if (componentScopeSelect) componentScopeSelect.innerHTML = '<option value="">Primary</option>';
         updateViewLink();
         updatePublishUrlPreview();
+        projectViewConfig = { mode: 'single', primaryProjectId: null, secondaryProjectId: null, tertiaryProjectId: null };
+        renderProjectViewModeControls();
         renderProjects();
         return;
     }
@@ -932,8 +1767,14 @@ async function loadProjectsList() {
     const current = projects.find(p => p.id === currentProjectId);
     currentProjectSlug = current ? current.slug : '';
     currentProjectCustomDomain = current ? normalizeDomainInput(current.customDomain || '') : '';
+    if (!activeComponentProjectId) activeComponentProjectId = currentProjectId;
     updateViewLink();
     updatePublishUrlPreview();
+    renderDualProjectSelectors();
+    if (!projectViewConfig.primaryProjectId || !projects.find((p) => p.id === projectViewConfig.primaryProjectId)) {
+        projectViewConfig.primaryProjectId = currentProjectId;
+    }
+    renderProjectViewModeControls();
     renderProjects();
 }
 
@@ -945,12 +1786,17 @@ projectSelect.addEventListener('change', async (e) => {
 
 async function setCurrentProject(id) {
     currentProjectId = id;
+    activeComponentProjectId = id;
+    dualDisplayMode = 'single';
+    dualSecondaryProjectId = null;
+    dualTertiaryProjectId = null;
     localStorage.setItem('statusPageProjectId', String(id));
     const current = projects.find(p => p.id === currentProjectId);
     currentProjectSlug = current ? current.slug : '';
     currentProjectCustomDomain = current ? normalizeDomainInput(current.customDomain || '') : '';
     updateViewLink();
     updatePublishUrlPreview();
+    renderDualProjectSelectors();
     allComponents = [];
     await reloadAll();
 }
@@ -1035,9 +1881,39 @@ function toast(msg) {
     setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+function clearFieldErrors(fieldMap) {
+    Object.values(fieldMap || {}).forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.setCustomValidity('');
+    });
+}
+
+function applyFieldErrors(fieldErrors, fieldMap) {
+    if (!fieldErrors || typeof fieldErrors !== 'object') return false;
+    let firstInvalid = null;
+    for (const [key, id] of Object.entries(fieldMap || {})) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const msg = fieldErrors[key] ? String(fieldErrors[key]) : '';
+        el.setCustomValidity(msg);
+        if (msg && !firstInvalid) firstInvalid = el;
+    }
+    if (!firstInvalid) return false;
+    firstInvalid.reportValidity();
+    firstInvalid.focus();
+    return true;
+}
+
+function summarizeFieldErrors(fieldErrors) {
+    if (!fieldErrors || typeof fieldErrors !== 'object') return '';
+    const items = Object.values(fieldErrors).map(v => String(v || '').trim()).filter(Boolean);
+    return items.join(' | ');
+}
+
 // ── Tabs ──────────────────────────────────────────────────────────────────
 function showTab(name) {
-    if (disabledTabs[name]) return;
+    if (isTabHiddenForCurrentUser(name)) return;
+    closeSidebar(); // close mobile nav on tab switch
     document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
     document.getElementById('tab-' + name).classList.add('active');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1057,8 +1933,43 @@ function showTab(name) {
 }
 
 // ── Modals ────────────────────────────────────────────────────────────────
-function openModal(id) { document.getElementById(id).classList.add('show'); }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+let _modalPrevFocus = null;
+function openModal(id) {
+    _modalPrevFocus = document.activeElement;
+    const modal = document.getElementById(id);
+    modal.classList.add('show');
+    // Focus first focusable element inside modal
+    const focusable = modal.querySelector('input,select,textarea,button,[tabindex]:not([tabindex="-1"])');
+    if (focusable) setTimeout(() => focusable.focus(), 50);
+}
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+    if (_modalPrevFocus) { _modalPrevFocus.focus(); _modalPrevFocus = null; }
+}
+
+// Close modals on Escape key; close sidebar on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const openOverlay = document.querySelector('.modal-overlay.show');
+        if (openOverlay) { closeModal(openOverlay.id); return; }
+        closeSidebar();
+    }
+});
+
+// Trap focus inside open modal
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Tab') return;
+    const openOverlay = document.querySelector('.modal-overlay.show');
+    if (!openOverlay) return;
+    const focusables = openOverlay.querySelectorAll('input,select,textarea,button,a,[tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+});
 
 function requireEdit() {
     if (!canEdit()) { toast('Viewer access: changes are disabled.'); return false; }
@@ -1094,7 +2005,13 @@ let allComponents = [];
 let expandedNodes = new Set();
 
 async function loadComponents() {
-    allComponents = await api('GET', projectPath('/components'));
+    renderDualProjectSelectors();
+    allComponents = await api('GET', componentProjectPath('/components'));
+    const scopeSettings = await api('GET', componentProjectPath('/settings'));
+    const uptimeSelect = document.getElementById('showUptime');
+    if (uptimeSelect && scopeSettings && !scopeSettings.error) {
+        uptimeSelect.value = String(scopeSettings.showUptime !== false);
+    }
     renderComponents();
 }
 
@@ -1205,7 +2122,7 @@ async function onDrop(e) {
         const comp = allComponents.find(c => c.id === id);
         if (comp) comp.order = idx;
     });
-    await api('POST', projectPath('/components/reorder'), { parentId, orderedIds: ids });
+    await api('POST', componentProjectPath('/components/reorder'), { parentId, orderedIds: ids });
     renderComponents();
 }
 
@@ -1245,7 +2162,7 @@ async function duplicateComponent(id) {
         parentId: comp.parentId || null,
         status: comp.status || 'operational'
     };
-    await api('POST', projectPath('/components'), data);
+    await api('POST', componentProjectPath('/components'), data);
     toast('Component duplicated');
     loadComponents();
 }
@@ -1260,8 +2177,8 @@ async function saveComponent() {
         status: document.getElementById('compStatus').value
     };
     if (!data.name) return;
-    if (id) await api('PUT', projectPath('/components/' + id), data);
-    else await api('POST', projectPath('/components'), data);
+    if (id) await api('PUT', componentProjectPath('/components/' + id), data);
+    else await api('POST', componentProjectPath('/components'), data);
     closeModal('componentModal');
     toast(id ? 'Component updated' : 'Component created');
     loadComponents();
@@ -1270,7 +2187,7 @@ async function saveComponent() {
 async function deleteComponent(id) {
     if (!requireEdit()) return;
     if (!confirm('Delete this component?')) return;
-    await api('DELETE', projectPath('/components/' + id));
+    await api('DELETE', componentProjectPath('/components/' + id));
     toast('Component deleted');
     loadComponents();
 }
@@ -1278,8 +2195,15 @@ async function deleteComponent(id) {
 
 // ── Incidents ─────────────────────────────────────────────────────────────
 async function loadIncidents() {
-    if (!allComponents.length) allComponents = await api('GET', projectPath('/components'));
-    const incidents = await api('GET', projectPath('/incidents'));
+    allComponents = await api('GET', projectPath('/components'));
+    const [incidentResponse, templateResponse] = await Promise.all([
+        api('GET', projectPath('/incidents')),
+        api('GET', projectPath('/incident-templates'))
+    ]);
+    const incidents = Array.isArray(incidentResponse) ? incidentResponse : [];
+    const templates = Array.isArray(templateResponse) ? templateResponse : [];
+    window.__incidentTemplateCache = templates;
+    renderIncidentTemplates(templates);
     const container = document.getElementById('incidentsList');
     if (incidents.length === 0) {
         container.innerHTML = '<div class="empty"><div class="empty-icon">&#10003;</div><p>No incidents reported</p></div>';
@@ -1314,12 +2238,135 @@ async function loadIncidents() {
     }).join('');
 }
 
+function renderIncidentTemplates(templates) {
+    const container = document.getElementById('incidentTemplatesList');
+    if (!container) return;
+    const list = Array.isArray(templates) ? templates : [];
+    if (list.length === 0) {
+        container.innerHTML = '<div class="empty" style="padding:18px 12px"><div class="empty-icon">&#128196;</div><p>No templates yet. Save a template to reuse incident details quickly.</p></div>';
+        return;
+    }
+    container.innerHTML = list.map((template) => {
+        const affected = (template.affectedComponents || []).map((id) => {
+            const component = allComponents.find((item) => item.id === id);
+            return component ? component.name : null;
+        }).filter(Boolean).join(', ');
+        return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+                <div style="min-width:0">
+                    <div style="font-weight:600;font-size:14px;color:#172b4d">${esc(template.name || 'Template')}</div>
+                    <div style="font-size:12px;color:#42526e;margin-top:2px">${esc(template.title || '')}</div>
+                    <div style="font-size:12px;color:#7a869a;margin-top:2px">Status: ${esc(statusLabel(template.status || 'investigating'))} &bull; Impact: ${esc(statusLabel(template.impact || 'minor'))}${affected ? ' &bull; Components: ' + esc(affected) : ''}</div>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+                    ${canEdit() ? `<button class="btn btn-sm btn-primary" onclick="useIncidentTemplate(${template.id})">Use</button>` : ''}
+                    ${canEdit() ? `<button class="btn btn-sm btn-secondary" onclick="openIncidentTemplateModal(${template.id})">Edit</button>` : ''}
+                    ${canEdit() ? `<button class="btn btn-sm btn-danger" onclick="deleteIncidentTemplate(${template.id})">Delete</button>` : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function openIncidentTemplateModal(id) {
+    if (!requireEdit()) return;
+    const template = (typeof id === 'number') ? ((window.__incidentTemplateCache || []).find((item) => item.id === id)) : null;
+    document.getElementById('incidentTemplateModalTitle').textContent = template ? 'Edit Incident Template' : 'New Incident Template';
+    document.getElementById('incidentTemplateName').value = template ? (template.name || '') : '';
+    document.getElementById('incidentTemplateTitle').value = template ? (template.title || '') : '';
+    document.getElementById('incidentTemplateStatus').value = template ? (template.status || 'investigating') : 'investigating';
+    document.getElementById('incidentTemplateImpact').value = template ? (template.impact || 'minor') : 'minor';
+    document.getElementById('incidentTemplateMessage').value = template ? (template.message || '') : '';
+    document.getElementById('incidentTemplateId').value = template ? template.id : '';
+    clearFieldErrors({ name: 'incidentTemplateName', title: 'incidentTemplateTitle', message: 'incidentTemplateMessage' });
+    renderComponentChecks('incidentTemplateComponents', template ? (template.affectedComponents || []) : []);
+    openModal('incidentTemplateModal');
+}
+
+async function saveIncidentTemplate() {
+    if (!requireEdit()) return;
+    const templateId = document.getElementById('incidentTemplateId').value;
+    const form = document.getElementById('incidentTemplateForm');
+    const nameEl = document.getElementById('incidentTemplateName');
+    const titleEl = document.getElementById('incidentTemplateTitle');
+    const messageEl = document.getElementById('incidentTemplateMessage');
+    clearFieldErrors({ name: 'incidentTemplateName', title: 'incidentTemplateTitle', message: 'incidentTemplateMessage' });
+
+    const name = String(nameEl.value || '').trim();
+    const title = String(titleEl.value || '').trim();
+    const message = String(messageEl.value || '').trim();
+    if (!name) nameEl.setCustomValidity('Template name is required');
+    if (!title) titleEl.setCustomValidity('Incident title is required');
+    if (!message) messageEl.setCustomValidity('Default message is required');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        const required = [];
+        if (!name) required.push('Template Name');
+        if (!title) required.push('Incident Title');
+        if (!message) required.push('Message');
+        toast('Required fields: ' + required.join(', '));
+        return;
+    }
+
+    const data = {
+        name,
+        title,
+        status: document.getElementById('incidentTemplateStatus').value,
+        impact: document.getElementById('incidentTemplateImpact').value,
+        message,
+        affectedComponents: [...document.querySelectorAll('#incidentTemplateComponents input:checked')].map((input) => parseInt(input.value, 10))
+    };
+    try {
+        const result = templateId
+            ? await api('PUT', projectPath('/incident-templates/' + templateId), data)
+            : await api('POST', projectPath('/incident-templates'), data);
+        if (result && result.error) {
+            const mapped = applyFieldErrors(result.fieldErrors, { name: 'incidentTemplateName', title: 'incidentTemplateTitle', message: 'incidentTemplateMessage' });
+            toast(mapped ? (summarizeFieldErrors(result.fieldErrors) || 'Please complete required fields') : result.error);
+            return;
+        }
+        closeModal('incidentTemplateModal');
+        toast(templateId ? 'Template updated' : 'Template created');
+        loadIncidents();
+    } catch (err) {
+        toast(err && err.message ? err.message : 'Failed to save incident template');
+    }
+}
+
+async function deleteIncidentTemplate(id) {
+    if (!requireEdit()) return;
+    if (!confirm('Delete this incident template?')) return;
+    const result = await api('DELETE', projectPath('/incident-templates/' + id));
+    if (result && result.error) {
+        toast(result.error);
+        return;
+    }
+    toast('Template deleted');
+    loadIncidents();
+}
+
+function useIncidentTemplate(id) {
+    if (!requireEdit()) return;
+    const template = (window.__incidentTemplateCache || []).find((item) => item.id === id);
+    if (!template) {
+        toast('Template not found');
+        return;
+    }
+    openIncidentModal();
+    document.getElementById('incTitle').value = template.title || '';
+    document.getElementById('incStatus').value = template.status || 'investigating';
+    document.getElementById('incImpact').value = template.impact || 'minor';
+    document.getElementById('incMessage').value = template.message || '';
+    renderComponentChecks('incComponents', template.affectedComponents || []);
+}
+
 function openIncidentModal() {
     if (!requireEdit()) return;
     document.getElementById('incTitle').value = '';
     document.getElementById('incStatus').value = 'investigating';
     document.getElementById('incImpact').value = 'minor';
     document.getElementById('incMessage').value = '';
+    clearFieldErrors({ title: 'incTitle', message: 'incMessage' });
     renderComponentChecks('incComponents');
     openModal('incidentModal');
 }
@@ -1333,19 +2380,44 @@ function renderComponentChecks(containerId, selectedIds) {
 
 async function saveIncident() {
     if (!requireEdit()) return;
+    const form = document.getElementById('incidentForm');
+    const titleEl = document.getElementById('incTitle');
+    const messageEl = document.getElementById('incMessage');
+    clearFieldErrors({ title: 'incTitle', message: 'incMessage' });
+    const title = String(titleEl.value || '').trim();
+    const message = String(messageEl.value || '').trim();
+    if (!title) titleEl.setCustomValidity('Title is required');
+    if (!message) messageEl.setCustomValidity('Message is required');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        const required = [];
+        if (!title) required.push('Title');
+        if (!message) required.push('Message');
+        toast('Required fields: ' + required.join(', '));
+        return;
+    }
+
     const data = {
-        title: document.getElementById('incTitle').value,
+        title,
         status: document.getElementById('incStatus').value,
         impact: document.getElementById('incImpact').value,
-        message: document.getElementById('incMessage').value,
+        message,
         affectedComponents: [...document.querySelectorAll('#incComponents input:checked')].map(i => parseInt(i.value))
     };
-    if (!data.title || !data.message) return;
-    await api('POST', projectPath('/incidents'), data);
-    closeModal('incidentModal');
-    toast('Incident created');
-    loadIncidents();
-    loadDashboard();
+    try {
+        const result = await api('POST', projectPath('/incidents'), data);
+        if (result && result.error) {
+            const mapped = applyFieldErrors(result.fieldErrors, { title: 'incTitle', message: 'incMessage' });
+            toast(mapped ? (summarizeFieldErrors(result.fieldErrors) || 'Please complete required fields') : result.error);
+            return;
+        }
+        closeModal('incidentModal');
+        toast('Incident created');
+        loadIncidents();
+        loadDashboard();
+    } catch (err) {
+        toast(err && err.message ? err.message : 'Failed to create incident');
+    }
 }
 
 function openUpdateModal(incId, currentStatus) {
@@ -1359,13 +2431,28 @@ function openUpdateModal(incId, currentStatus) {
 async function postIncidentUpdate() {
     if (!requireEdit()) return;
     const incId = document.getElementById('updIncidentId').value;
-    const data = { status: document.getElementById('updStatus').value, message: document.getElementById('updMessage').value };
-    if (!data.message) return;
-    await api('POST', projectPath('/incidents/' + incId + '/updates'), data);
-    closeModal('updateModal');
-    toast('Incident updated');
-    loadIncidents();
-    loadDashboard();
+    const messageEl = document.getElementById('updMessage');
+    const message = String(messageEl.value || '').trim();
+    messageEl.setCustomValidity(message ? '' : 'Message is required');
+    if (!message) {
+        messageEl.reportValidity();
+        toast('Required fields: Message');
+        return;
+    }
+    const data = { status: document.getElementById('updStatus').value, message };
+    try {
+        const result = await api('POST', projectPath('/incidents/' + incId + '/updates'), data);
+        if (result && result.error) {
+            toast(result.error || 'Failed to update incident');
+            return;
+        }
+        closeModal('updateModal');
+        toast('Incident updated');
+        loadIncidents();
+        loadDashboard();
+    } catch (err) {
+        toast(err && err.message ? err.message : 'Failed to update incident');
+    }
 }
 
 async function deleteIncident(id) {
@@ -1379,9 +2466,16 @@ async function deleteIncident(id) {
 
 // ── Maintenance ───────────────────────────────────────────────────────────
 async function loadMaintenances() {
-    if (!allComponents.length) allComponents = await api('GET', projectPath('/components'));
-    const list = await api('GET', projectPath('/maintenances'));
-    window.__maintenanceCache = list || [];
+    allComponents = await api('GET', projectPath('/components'));
+    const [maintenanceResponse, templateResponse] = await Promise.all([
+        api('GET', projectPath('/maintenances')),
+        api('GET', projectPath('/maintenance-templates'))
+    ]);
+    const list = Array.isArray(maintenanceResponse) ? maintenanceResponse : [];
+    const templates = Array.isArray(templateResponse) ? templateResponse : [];
+    window.__maintenanceCache = list;
+    window.__maintenanceTemplateCache = templates;
+    renderMaintenanceTemplates(templates);
     const container = document.getElementById('maintenanceList');
     if (list.length === 0) {
         container.innerHTML = '<div class="empty"><div class="empty-icon">&#128736;</div><p>No scheduled maintenances</p></div>';
@@ -1404,6 +2498,149 @@ async function loadMaintenances() {
     }).join('');
 }
 
+function renderMaintenanceTemplates(templates) {
+    const container = document.getElementById('maintenanceTemplatesList');
+    if (!container) return;
+    const list = Array.isArray(templates) ? templates : [];
+    if (list.length === 0) {
+        container.innerHTML = '<div class="empty" style="padding:18px 12px"><div class="empty-icon">&#128196;</div><p>No templates yet. Save a template to reuse maintenance details quickly.</p></div>';
+        return;
+    }
+    container.innerHTML = list.map((template) => {
+        const affected = (template.affectedComponents || []).map((id) => {
+            const component = allComponents.find((item) => item.id === id);
+            return component ? component.name : null;
+        }).filter(Boolean).join(', ');
+        const duration = parseInt(template.defaultDurationMinutes, 10);
+        const durationText = Number.isInteger(duration) ? `${duration} min` : '60 min';
+        return `<div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+                <div style="min-width:0">
+                    <div style="font-weight:600;font-size:14px;color:#172b4d">${esc(template.name || 'Template')}</div>
+                    <div style="font-size:12px;color:#42526e;margin-top:2px">${esc(template.title || '')}</div>
+                    <div style="font-size:12px;color:#7a869a;margin-top:2px">Duration: ${esc(durationText)}${affected ? ' &bull; Components: ' + esc(affected) : ''}</div>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+                    ${canEdit() ? `<button class="btn btn-sm btn-primary" onclick="useMaintenanceTemplate(${template.id})">Use</button>` : ''}
+                    ${canEdit() ? `<button class="btn btn-sm btn-secondary" onclick="openMaintenanceTemplateModal(${template.id})">Edit</button>` : ''}
+                    ${canEdit() ? `<button class="btn btn-sm btn-danger" onclick="deleteMaintenanceTemplate(${template.id})">Delete</button>` : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function openMaintenanceTemplateModal(id) {
+    if (!requireEdit()) return;
+    const template = (typeof id === 'number') ? ((window.__maintenanceTemplateCache || []).find((item) => item.id === id)) : null;
+    document.getElementById('maintenanceTemplateModalTitle').textContent = template ? 'Edit Maintenance Template' : 'New Maintenance Template';
+    document.getElementById('maintenanceTemplateName').value = template ? (template.name || '') : '';
+    document.getElementById('maintenanceTemplateTitle').value = template ? (template.title || '') : '';
+    document.getElementById('maintenanceTemplateMessage').value = template ? (template.message || '') : '';
+    document.getElementById('maintenanceTemplateDuration').value = template ? (template.defaultDurationMinutes || 60) : 60;
+    document.getElementById('maintenanceTemplateId').value = template ? template.id : '';
+    clearFieldErrors({
+        name: 'maintenanceTemplateName',
+        title: 'maintenanceTemplateTitle',
+        defaultDurationMinutes: 'maintenanceTemplateDuration'
+    });
+    renderComponentChecks('maintenanceTemplateComponents', template ? (template.affectedComponents || []) : []);
+    openModal('maintenanceTemplateModal');
+}
+
+async function saveMaintenanceTemplate() {
+    if (!requireEdit()) return;
+    const templateId = document.getElementById('maintenanceTemplateId').value;
+    const form = document.getElementById('maintenanceTemplateForm');
+    const nameEl = document.getElementById('maintenanceTemplateName');
+    const titleEl = document.getElementById('maintenanceTemplateTitle');
+    const durationEl = document.getElementById('maintenanceTemplateDuration');
+    clearFieldErrors({
+        name: 'maintenanceTemplateName',
+        title: 'maintenanceTemplateTitle',
+        defaultDurationMinutes: 'maintenanceTemplateDuration'
+    });
+
+    const name = String(nameEl.value || '').trim();
+    const title = String(titleEl.value || '').trim();
+    const durationRaw = String(durationEl.value || '').trim();
+    if (!name) nameEl.setCustomValidity('Template name is required');
+    if (!title) titleEl.setCustomValidity('Maintenance title is required');
+    if (!durationRaw) durationEl.setCustomValidity('Duration is required');
+    const duration = parseInt(durationRaw, 10);
+    if (durationRaw && (!Number.isInteger(duration) || duration < 5 || duration > 10080)) {
+        durationEl.setCustomValidity('Duration must be between 5 and 10080 minutes');
+    }
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        const required = [];
+        if (!name) required.push('Template Name');
+        if (!title) required.push('Maintenance Title');
+        if (!durationRaw) required.push('Duration');
+        toast(required.length ? ('Required fields: ' + required.join(', ')) : 'Please fix invalid template fields');
+        return;
+    }
+
+    const data = {
+        name,
+        title,
+        message: String(document.getElementById('maintenanceTemplateMessage').value || '').trim(),
+        defaultDurationMinutes: duration,
+        affectedComponents: [...document.querySelectorAll('#maintenanceTemplateComponents input:checked')].map((input) => parseInt(input.value, 10))
+    };
+    try {
+        const result = templateId
+            ? await api('PUT', projectPath('/maintenance-templates/' + templateId), data)
+            : await api('POST', projectPath('/maintenance-templates'), data);
+        if (result && result.error) {
+            const mapped = applyFieldErrors(result.fieldErrors, {
+                name: 'maintenanceTemplateName',
+                title: 'maintenanceTemplateTitle',
+                defaultDurationMinutes: 'maintenanceTemplateDuration'
+            });
+            toast(mapped ? (summarizeFieldErrors(result.fieldErrors) || 'Please complete required fields') : result.error);
+            return;
+        }
+        closeModal('maintenanceTemplateModal');
+        toast(templateId ? 'Template updated' : 'Template created');
+        loadMaintenances();
+    } catch (err) {
+        toast(err && err.message ? err.message : 'Failed to save maintenance template');
+    }
+}
+
+async function deleteMaintenanceTemplate(id) {
+    if (!requireEdit()) return;
+    if (!confirm('Delete this maintenance template?')) return;
+    const result = await api('DELETE', projectPath('/maintenance-templates/' + id));
+    if (result && result.error) {
+        toast(result.error);
+        return;
+    }
+    toast('Template deleted');
+    loadMaintenances();
+}
+
+function useMaintenanceTemplate(id) {
+    if (!requireEdit()) return;
+    const template = (window.__maintenanceTemplateCache || []).find((item) => item.id === id);
+    if (!template) {
+        toast('Template not found');
+        return;
+    }
+    openMaintenanceModal();
+    const start = new Date();
+    const durationCandidate = parseInt(template.defaultDurationMinutes, 10);
+    const durationMinutes = Number.isInteger(durationCandidate) ? Math.max(5, Math.min(10080, durationCandidate)) : 60;
+    const end = new Date(start.getTime() + durationMinutes * 60000);
+    document.getElementById('maintenanceModalTitle').textContent = 'Schedule Maintenance from Template';
+    document.getElementById('maintTitle').value = template.title || '';
+    document.getElementById('maintMessage').value = template.message || '';
+    document.getElementById('maintStart').value = toLocalInput(start.toISOString());
+    document.getElementById('maintEnd').value = toLocalInput(end.toISOString());
+    renderComponentChecks('maintComponents', template.affectedComponents || []);
+}
+
 function openMaintenanceModal(id) {
     if (!requireEdit()) return;
     const maint = (typeof id === 'number') ? ((window.__maintenanceCache || []).find(m => m.id === id)) : null;
@@ -1413,6 +2650,7 @@ function openMaintenanceModal(id) {
     document.getElementById('maintStart').value = maint ? toLocalInput(maint.scheduledStart) : '';
     document.getElementById('maintEnd').value = maint ? toLocalInput(maint.scheduledEnd) : '';
     document.getElementById('maintId').value = maint ? maint.id : '';
+    clearFieldErrors({ title: 'maintTitle', scheduledStart: 'maintStart', scheduledEnd: 'maintEnd' });
     renderComponentChecks('maintComponents', maint ? (maint.affectedComponents || []) : []);
     openModal('maintenanceModal');
 }
@@ -1420,19 +2658,64 @@ function openMaintenanceModal(id) {
 async function saveMaintenance() {
     if (!requireEdit()) return;
     const id = document.getElementById('maintId').value;
+    const form = document.getElementById('maintenanceForm');
+    const titleEl = document.getElementById('maintTitle');
+    const startEl = document.getElementById('maintStart');
+    const endEl = document.getElementById('maintEnd');
+    clearFieldErrors({ title: 'maintTitle', scheduledStart: 'maintStart', scheduledEnd: 'maintEnd' });
+
+    const title = String(titleEl.value || '').trim();
+    const startRaw = String(startEl.value || '').trim();
+    const endRaw = String(endEl.value || '').trim();
+    if (!title) titleEl.setCustomValidity('Title is required');
+    if (!startRaw) startEl.setCustomValidity('Start date/time is required');
+    if (!endRaw) endEl.setCustomValidity('End date/time is required');
+
+    let startDate = null;
+    let endDate = null;
+    if (startRaw) {
+        startDate = new Date(startRaw);
+        if (Number.isNaN(startDate.getTime())) startEl.setCustomValidity('Start date/time is invalid');
+    }
+    if (endRaw) {
+        endDate = new Date(endRaw);
+        if (Number.isNaN(endDate.getTime())) endEl.setCustomValidity('End date/time is invalid');
+    }
+    if (startDate && endDate && endDate.getTime() <= startDate.getTime()) {
+        endEl.setCustomValidity('End must be after start');
+    }
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        const required = [];
+        if (!title) required.push('Title');
+        if (!startRaw) required.push('Start');
+        if (!endRaw) required.push('End');
+        toast(required.length ? ('Required fields: ' + required.join(', ')) : 'Please fix invalid maintenance fields');
+        return;
+    }
+
     const data = {
-        title: document.getElementById('maintTitle').value,
+        title,
         message: document.getElementById('maintMessage').value,
-        scheduledStart: new Date(document.getElementById('maintStart').value).toISOString(),
-        scheduledEnd: new Date(document.getElementById('maintEnd').value).toISOString(),
+        scheduledStart: startDate.toISOString(),
+        scheduledEnd: endDate.toISOString(),
         affectedComponents: [...document.querySelectorAll('#maintComponents input:checked')].map(i => parseInt(i.value))
     };
-    if (!data.title || !data.scheduledStart || !data.scheduledEnd) return;
-    if (id) await api('PUT', projectPath('/maintenances/' + id), data);
-    else await api('POST', projectPath('/maintenances'), data);
-    closeModal('maintenanceModal');
-    toast(id ? 'Maintenance updated' : 'Maintenance scheduled');
-    loadMaintenances();
+    try {
+        const result = id
+            ? await api('PUT', projectPath('/maintenances/' + id), data)
+            : await api('POST', projectPath('/maintenances'), data);
+        if (result && result.error) {
+            const mapped = applyFieldErrors(result.fieldErrors, { title: 'maintTitle', scheduledStart: 'maintStart', scheduledEnd: 'maintEnd' });
+            toast(mapped ? (summarizeFieldErrors(result.fieldErrors) || 'Please complete required fields') : result.error);
+            return;
+        }
+        closeModal('maintenanceModal');
+        toast(id ? 'Maintenance updated' : 'Maintenance scheduled');
+        loadMaintenances();
+    } catch (err) {
+        toast(err && err.message ? err.message : 'Failed to save maintenance');
+    }
 }
 
 function toLocalInput(value) {
@@ -1443,17 +2726,143 @@ function toLocalInput(value) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-async function startMaintenance(id) { await api('PUT', projectPath('/maintenances/' + id), { status: 'in_progress' }); toast('Maintenance started'); loadMaintenances(); }
+async function startMaintenance(id) { if (!requireEdit()) return; await api('PUT', projectPath('/maintenances/' + id), { status: 'in_progress' }); toast('Maintenance started'); loadMaintenances(); }
 async function completeMaintenance(id) { if (!requireEdit()) return; await api('PUT', projectPath('/maintenances/' + id), { status: 'completed' }); toast('Maintenance completed'); loadMaintenances(); }
 async function deleteMaintenance(id) { if (!requireEdit()) return; if (!confirm('Delete?')) return; await api('DELETE', projectPath('/maintenances/' + id)); toast('Deleted'); loadMaintenances(); }
 
 // ── Subscribers ───────────────────────────────────────────────────────────
+let selectedSubscriberImportFile = null;
+
+function isValidEmailInput(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
+
+function normalizeEmailInput(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function downloadTextFile(filename, content, mimeType) {
+    const blob = new Blob([String(content || '')], { type: mimeType || 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || 'download.txt';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function openExportSubscribersModal() {
+    openModal('exportSubscribersModal');
+}
+
+function openImportSubscribersModal() {
+    selectedSubscriberImportFile = null;
+    const nameEl = document.getElementById('subscriberImportFileName');
+    if (nameEl) nameEl.textContent = 'No file selected.';
+    const replaceEl = document.getElementById('subscriberImportReplace');
+    if (replaceEl) replaceEl.checked = false;
+    const input = document.getElementById('subscriberImportFileInput');
+    if (input) input.value = '';
+    openModal('importSubscribersModal');
+}
+
+function triggerSubscriberImportFile() {
+    const input = document.getElementById('subscriberImportFileInput');
+    if (input) input.click();
+}
+
+function parseSubscriberEmailsFromCsv(text) {
+    const lines = String(text || '').split(/\r?\n/);
+    const emails = [];
+    lines.forEach((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        if (index === 0 && /^email(\s*,.*)?$/i.test(trimmed)) return;
+        const firstCol = trimmed.split(',')[0].replace(/^"|"$/g, '').trim();
+        if (!firstCol) return;
+        emails.push(firstCol);
+    });
+    return emails;
+}
+
+function parseSubscriberEmailsFromJson(text) {
+    const payload = JSON.parse(String(text || '[]'));
+    if (!Array.isArray(payload)) throw new Error('JSON must be an array');
+    return payload.map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object' && item.email) return String(item.email);
+        return '';
+    }).filter(Boolean);
+}
+
+async function exportSubscribers() {
+    const selected = document.querySelector('input[name="subscriberExportFormat"]:checked');
+    const format = selected ? String(selected.value || 'csv').toLowerCase() : 'csv';
+    const result = await api('GET', projectPath('/subscribers/export?format=' + encodeURIComponent(format)));
+    if (result && result.error) {
+        toast(result.error);
+        return;
+    }
+    const filename = result.filename || `subscribers.${format}`;
+    const content = result.content || '';
+    const mimeType = format === 'json' ? 'application/json;charset=utf-8' : 'text/csv;charset=utf-8';
+    downloadTextFile(filename, content, mimeType);
+    toast(`Exported ${result.count || 0} email subscribers`);
+    closeModal('exportSubscribersModal');
+}
+
+async function importSubscribers() {
+    if (!requireEdit()) return;
+    if (!selectedSubscriberImportFile) {
+        toast('Choose a CSV or JSON file first');
+        return;
+    }
+    let raw = '';
+    try {
+        raw = await selectedSubscriberImportFile.text();
+    } catch {
+        toast('Unable to read selected file');
+        return;
+    }
+    const filename = String(selectedSubscriberImportFile.name || '').toLowerCase();
+    let parsed = [];
+    try {
+        if (filename.endsWith('.json')) parsed = parseSubscriberEmailsFromJson(raw);
+        else parsed = parseSubscriberEmailsFromCsv(raw);
+    } catch (err) {
+        toast(err && err.message ? err.message : 'Invalid import file');
+        return;
+    }
+    const normalized = [...new Set(parsed.map(normalizeEmailInput).filter(Boolean))];
+    if (!normalized.length) {
+        toast('No email addresses found in file');
+        return;
+    }
+    const replaceExisting = !!document.getElementById('subscriberImportReplace').checked;
+    const result = await api('POST', projectPath('/subscribers/import'), {
+        emails: normalized,
+        replaceExisting
+    });
+    if (result && result.error) {
+        toast(result.error);
+        return;
+    }
+    toast(`Imported ${result.imported || 0}. Skipped existing ${result.skippedExisting || 0}, invalid ${result.skippedInvalid || 0}`);
+    closeModal('importSubscribersModal');
+    loadSubscribers();
+}
+
 async function loadSubscribers() {
     const list = await api('GET', projectPath('/subscribers'));
     const container = document.getElementById('subscribersList');
-    if (list.length === 0) { container.innerHTML = '<div class="empty"><div class="empty-icon">&#9993;</div><p>No subscribers yet</p></div>'; return; }
-    container.innerHTML = `<div class="card"><div class="card-body"><div class="table-wrap"><table class="table"><thead><tr><th>Email</th><th>Subscribed</th><th style="text-align:right">Actions</th></tr></thead><tbody>${list.map(s =>
-        `<tr><td>${esc(s.email || s.webhook || '-')}</td><td style="color:#7a869a">${new Date(s.createdAt).toLocaleDateString()}</td><td class="actions"><button class="btn btn-sm btn-danger" onclick="deleteSubscriber(${s.id})">Remove</button></td></tr>`
+    const emailSubscribers = Array.isArray(list)
+        ? list.filter((s) => isValidEmailInput(s && s.email ? s.email : '')).map((s) => ({ ...s, email: normalizeEmailInput(s.email) }))
+        : [];
+    if (emailSubscribers.length === 0) { container.innerHTML = '<div class="empty"><div class="empty-icon">&#9993;</div><p>No email subscribers yet</p></div>'; return; }
+    container.innerHTML = `<div class="card"><div class="card-body"><div class="table-wrap"><table class="table"><thead><tr><th>Email</th><th>Subscribed</th><th style="text-align:right">Actions</th></tr></thead><tbody>${emailSubscribers.map(s =>
+        `<tr><td>${esc(s.email || '-')}</td><td style="color:#7a869a">${new Date(s.createdAt).toLocaleDateString()}</td><td class="actions"><button class="btn btn-sm btn-danger" onclick="deleteSubscriber(${s.id})">Remove</button></td></tr>`
     ).join('')}</tbody></table></div></div></div>`;
 }
 
@@ -1549,6 +2958,7 @@ let disabledTabs = {};
 let activeSettingsSubtab = 'page-info';
 
 function showSettingsSubtab(name) {
+    if (!isAdmin() && name === 'admin-panel') name = 'page-info';
     activeSettingsSubtab = name;
     document.querySelectorAll('.settings-tab').forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.getElementById('settingsTabBtn-' + name);
@@ -1569,6 +2979,10 @@ async function loadDomainConfig() {
     if (primaryInfo) primaryInfo.textContent = (cfg.instructions && cfg.instructions.primary) || '';
     const redirectInfo = document.getElementById('dnsInstructionRedirect');
     if (redirectInfo) redirectInfo.textContent = (cfg.instructions && cfg.instructions.redirect) || '';
+    const provisionPanel = document.getElementById('domainProvisionResults');
+    if (provisionPanel && cfg && cfg.provisioning && cfg.provisioning.enabled === false) {
+        provisionPanel.innerHTML = `<div style="color:#b38600">Domain automation is not configured on server. Set FIREBASE_PROJECT_ID/FIREBASE_HOSTING_SITE for provisioning.</div>`;
+    }
 }
 
 async function validateProjectDomains() {
@@ -1576,6 +2990,57 @@ async function validateProjectDomains() {
     if (panel) panel.textContent = 'Validating DNS records...';
     const result = await api('POST', projectPath('/domain-validate'), {});
     renderDomainValidation(result);
+}
+
+function renderEmailServiceStatus(status) {
+    const panel = document.getElementById('emailServiceStatus');
+    if (!panel) return;
+    if (!status || status.error) {
+        panel.innerHTML = `<div style="color:#bf2600">${esc((status && status.error) || 'Unable to load email status')}</div>`;
+        return;
+    }
+    const enabled = !!status.enabled;
+    const color = enabled ? '#0b875b' : '#b38600';
+    const missing = Array.isArray(status.missingConfig) ? status.missingConfig : [];
+    const missingText = missing.length ? missing.join(', ') : 'None';
+    const sender = status.sender || {};
+    const smtp = status.smtp || {};
+    panel.innerHTML = `
+        <div><strong>Provider:</strong> ${esc(status.provider || '-')}</div>
+        <div><strong>Status:</strong> <span style="color:${color};font-weight:600">${enabled ? 'READY' : 'NOT CONFIGURED'}</span></div>
+        <div><strong>SMTP:</strong> host=${esc(smtp.host || '-')} port=${esc(String(smtp.port || '-'))} secure=${smtp.secure ? 'yes' : 'no'} auth=${smtp.hasAuth ? 'yes' : 'no'}</div>
+        <div><strong>Sender:</strong> ${esc(sender.fromEmail || '-')} (reply-to: ${esc(sender.replyTo || '-')})</div>
+        <div><strong>Missing:</strong> ${esc(missingText)}</div>
+    `;
+}
+
+async function loadEmailServiceStatus() {
+    const panel = document.getElementById('emailServiceStatus');
+    if (panel) panel.textContent = 'Checking email delivery configuration...';
+    const status = await api('GET', projectPath('/email-status'));
+    renderEmailServiceStatus(status);
+}
+
+async function sendTestEmail() {
+    if (!requireEdit()) return;
+    const to = String(document.getElementById('emailTestRecipient').value || '').trim();
+    const subject = String(document.getElementById('emailTestSubject').value || '').trim();
+    const message = String(document.getElementById('emailTestMessage').value || '').trim();
+    const payload = {};
+    if (to) payload.email = to;
+    if (subject) payload.subject = subject;
+    if (message) payload.message = message;
+    const result = await api('POST', projectPath('/email-test'), payload);
+    if (result && result.error) {
+        toast(result.error);
+        if (Array.isArray(result.missingConfig) && result.missingConfig.length) {
+            toast('Missing: ' + result.missingConfig.join(', '));
+        }
+        await loadEmailServiceStatus();
+        return;
+    }
+    toast('Test email sent to ' + (result.to || to));
+    await loadEmailServiceStatus();
 }
 
 function renderAnalytics(data) {
@@ -1637,15 +3102,31 @@ async function loadActivityLog() {
 async function loadSettings() {
     const s = await api('GET', projectPath('/settings'));
     initEmailLogoUpload();
+    initBrandLogoUpload();
     document.getElementById('setOrganizationLegalName').value = s.organizationLegalName || s.companyName || '';
     document.getElementById('setPageName').value = s.pageName || s.pageTitle || '';
     document.getElementById('setPageTitle').value = s.pageTitle || '';
     document.getElementById('setCompanyUrl').value = s.companyUrl || '';
     document.getElementById('setSupportUrl').value = s.supportUrl || '';
     document.getElementById('setPrivacyPolicyUrl').value = s.privacyPolicyUrl || '';
+    dualDisplayMode = s.displayMode === 'triad' ? 'triad' : (s.displayMode === 'dual' ? 'dual' : 'single');
+    dualSecondaryProjectId = (dualDisplayMode === 'dual' || dualDisplayMode === 'triad') ? (parseInt(s.secondaryProjectId, 10) || null) : null;
+    dualTertiaryProjectId = dualDisplayMode === 'triad' ? (parseInt(s.tertiaryProjectId, 10) || null) : null;
+    onDisplayModeChange(dualDisplayMode);
+    projectViewConfig.mode = dualDisplayMode;
+    projectViewConfig.primaryProjectId = currentProjectId;
+    projectViewConfig.secondaryProjectId = dualSecondaryProjectId;
+    projectViewConfig.tertiaryProjectId = dualTertiaryProjectId;
+    renderProjectViewModeControls();
     document.getElementById('setSmsCountryCode').value = s.defaultSmsCountryCode || '+1';
     document.getElementById('setCustomDomain').value = s.customDomain || '';
     document.getElementById('setRedirectDomains').value = Array.isArray(s.redirectDomains) ? s.redirectDomains.join('\n') : '';
+    document.getElementById('setDomainAutomationProvider').value = s.domainAutomationProvider || 'firebase_hosting';
+    document.getElementById('setDomainRegistrar').value = s.domainRegistrar || '';
+    document.getElementById('setDnsProvider').value = s.dnsProvider || '';
+    document.getElementById('setDomainContactEmail').value = s.domainContactEmail || '';
+    document.getElementById('setDnsProviderAccountId').value = s.dnsProviderAccountId || '';
+    document.getElementById('setDnsProviderZone').value = s.dnsProviderZone || '';
     document.getElementById('setGaTrackingId').value = s.googleAnalyticsTrackingId || '';
     document.getElementById('setSupportEmail').value = s.supportEmail || '';
     document.getElementById('setNotificationFromName').value = s.notificationFromName || s.organizationLegalName || '';
@@ -1654,9 +3135,16 @@ async function loadSettings() {
     document.getElementById('setNotificationFooterMessage').value = s.notificationFooterMessage || '';
     document.getElementById('setNotificationLogoUrl').value = s.notificationLogoUrl || '';
     document.getElementById('setNotificationUseStatusLogo').checked = s.notificationUseStatusLogo !== false;
+    document.getElementById('setStatusPageLogoUrl').value = s.statusPageLogoUrl || DEFAULT_BRAND_LOGO_URL;
+    document.getElementById('setAdminPanelLogoUrl').value = s.adminPanelLogoUrl || DEFAULT_BRAND_LOGO_URL;
     document.getElementById('setEffectiveNotificationFromEmail').value = s.effectiveNotificationFromEmail || s.notificationFromEmail || s.supportEmail || '';
+    document.getElementById('emailTestRecipient').value = s.supportEmail || s.notificationReplyToEmail || '';
+    document.getElementById('emailTestSubject').value = '';
+    document.getElementById('emailTestMessage').value = '';
     renderEmailLogoPreview();
-    document.getElementById('setBrandColor').value = s.brandColor || '#0052cc';
+    renderStatusLogoPreview();
+    renderAdminPanelLogoPreview();
+    document.getElementById('setBrandColor').value = s.brandColor || '#8738ff';
     document.getElementById('setAboutText').value = s.aboutText || '';
     document.getElementById('setTimezone').value = s.timezone || 'UTC';
     document.getElementById('setHideFromSearchEngines').checked = !!s.hideFromSearchEngines;
@@ -1664,11 +3152,14 @@ async function loadSettings() {
     updateViewLink();
     updatePublishUrlPreview();
     await loadDomainConfig();
+    await loadDomainProvisionStatus();
+    await loadEmailServiceStatus();
     const viewSelect = document.getElementById('componentsView');
     if (viewSelect) viewSelect.value = s.componentsView || 'list';
     componentsDisplayMode = s.componentsView || 'list';
     const uptimeSelect = document.getElementById('showUptime');
     if (uptimeSelect) uptimeSelect.value = String(s.showUptime !== false);
+    renderDualProjectSelectors();
     disabledTabs = s.disabledTabs || {};
     applyMenuVisibility();
     showSettingsSubtab(activeSettingsSubtab);
@@ -1677,6 +3168,11 @@ async function loadSettings() {
 document.getElementById('settingsForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!requireEdit()) return;
+    clearFieldErrors({
+        domainRegistrar: 'setDomainRegistrar',
+        dnsProvider: 'setDnsProvider',
+        domainContactEmail: 'setDomainContactEmail'
+    });
     const saved = await api('PUT', projectPath('/settings'), {
         organizationLegalName: document.getElementById('setOrganizationLegalName').value,
         companyName: document.getElementById('setOrganizationLegalName').value,
@@ -1692,8 +3188,16 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
         notificationFooterMessage: document.getElementById('setNotificationFooterMessage').value,
         notificationLogoUrl: document.getElementById('setNotificationLogoUrl').value,
         notificationUseStatusLogo: document.getElementById('setNotificationUseStatusLogo').checked,
+        statusPageLogoUrl: document.getElementById('setStatusPageLogoUrl').value,
+        adminPanelLogoUrl: document.getElementById('setAdminPanelLogoUrl').value,
         customDomain: normalizeDomainInput(document.getElementById('setCustomDomain').value),
         redirectDomains: parseRedirectDomainsInput(document.getElementById('setRedirectDomains').value),
+        domainAutomationProvider: document.getElementById('setDomainAutomationProvider').value,
+        domainRegistrar: document.getElementById('setDomainRegistrar').value,
+        dnsProvider: document.getElementById('setDnsProvider').value,
+        domainContactEmail: document.getElementById('setDomainContactEmail').value,
+        dnsProviderAccountId: document.getElementById('setDnsProviderAccountId').value,
+        dnsProviderZone: document.getElementById('setDnsProviderZone').value,
         googleAnalyticsTrackingId: document.getElementById('setGaTrackingId').value,
         hideFromSearchEngines: document.getElementById('setHideFromSearchEngines').checked,
         supportEmail: document.getElementById('setSupportEmail').value,
@@ -1702,6 +3206,11 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
         timezone: document.getElementById('setTimezone').value
     });
     if (saved && saved.error) {
+        applyFieldErrors(saved.fieldErrors, {
+            domainRegistrar: 'setDomainRegistrar',
+            dnsProvider: 'setDnsProvider',
+            domainContactEmail: 'setDomainContactEmail'
+        });
         toast(saved.error);
         return;
     }
@@ -1714,6 +3223,15 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
 
 const customDomainField = document.getElementById('setCustomDomain');
 if (customDomainField) customDomainField.addEventListener('input', updatePublishUrlPreview);
+const subscriberImportFileInput = document.getElementById('subscriberImportFileInput');
+if (subscriberImportFileInput) {
+    subscriberImportFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+        selectedSubscriberImportFile = file;
+        const nameEl = document.getElementById('subscriberImportFileName');
+        if (nameEl) nameEl.textContent = file ? file.name : 'No file selected.';
+    });
+}
 const useStatusLogoCheckbox = document.getElementById('setNotificationUseStatusLogo');
 if (useStatusLogoCheckbox) {
     useStatusLogoCheckbox.addEventListener('change', (e) => {
@@ -1726,15 +3244,15 @@ if (useStatusLogoCheckbox) {
 async function saveShowUptime() {
     if (!requireEdit()) return;
     const val = document.getElementById('showUptime').value === 'true';
-    await api('PUT', projectPath('/settings'), { showUptime: val });
-    toast('Uptime section updated');
+    await api('PUT', componentProjectPath('/settings'), { showUptime: val });
+    toast('Uptime section updated for ' + componentScopeLabel(activeComponentProjectId || currentProjectId));
 }
 
 function applyMenuVisibility() {
     const map = disabledTabs || {};
     document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
         const tab = item.getAttribute('data-tab');
-        const hidden = !!map[tab];
+        const hidden = isTabHiddenForCurrentUser(tab);
         item.style.display = hidden ? 'none' : '';
         const tabPage = document.getElementById('tab-' + tab);
         if (tabPage) tabPage.style.display = hidden ? 'none' : '';
@@ -1751,6 +3269,7 @@ function applyMenuVisibility() {
 }
 
 async function saveMenuVisibility() {
+    if (!isAdmin()) { toast('Admin only'); return; }
     if (!requireEdit()) return;
     disabledTabs = {
         components: document.getElementById('toggle-components').checked,
@@ -1768,26 +3287,44 @@ async function saveMenuVisibility() {
 
 function applyRolePermissions() {
     const usersNav = document.querySelector('.nav-item[data-tab="users"]');
-    if (usersNav) usersNav.style.display = isAdmin() ? '' : 'none';
+    if (usersNav) usersNav.style.display = isTabHiddenForCurrentUser('users') ? 'none' : '';
     const usersTab = document.getElementById('tab-users');
-    if (usersTab && !isAdmin()) usersTab.style.display = 'none';
+    if (usersTab) usersTab.style.display = isTabHiddenForCurrentUser('users') ? 'none' : '';
+    const adminPanelSettingsBtn = document.getElementById('settingsTabBtn-admin-panel');
+    if (adminPanelSettingsBtn) adminPanelSettingsBtn.style.display = isAdmin() ? '' : 'none';
+    const adminPanelSettingsTab = document.getElementById('settings-subtab-admin-panel');
+    if (adminPanelSettingsTab) adminPanelSettingsTab.style.display = isAdmin() ? '' : 'none';
+    if (!isAdmin() && activeSettingsSubtab === 'admin-panel') showSettingsSubtab('page-info');
 
     const editOnlyButtons = [
         'qaIncidentBtn', 'qaMaintenanceBtn', 'qaComponentBtn',
-        'componentsAddBtn', 'incidentsAddBtn', 'maintenanceAddBtn', 'projectsAddBtn',
-        'settingsSaveBtn', 'menuSaveBtn'
+        'componentsAddBtn', 'incidentsAddBtn', 'maintenanceAddBtn', 'projectsAddBtn', 'projectViewSaveBtn',
+        'incidentTemplateAddBtn', 'maintenanceTemplateAddBtn', 'settingsSaveBtn', 'menuSaveBtn', 'subscribersImportBtn', 'subscribersExportBtn',
+        'statusLogoUploadBtn', 'statusLogoCopyFromAdminBtn', 'statusLogoResetBtn',
+        'adminLogoUploadBtn', 'adminLogoCopyFromStatusBtn', 'adminLogoResetBtn'
     ];
     editOnlyButtons.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         el.style.display = canEdit() ? '' : 'none';
     });
+    ['projectViewModeSelect', 'projectPrimarySelect', 'projectSecondarySelect', 'projectTertiarySelect'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = !canEdit();
+    });
+    ['statusLogoDrop', 'adminPanelLogoDrop', 'emailLogoDrop'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.pointerEvents = canEdit() ? '' : 'none';
+        el.style.opacity = canEdit() ? '1' : '.6';
+    });
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────
 function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function statusLabel(s) {
-    const m = { operational: 'Operational', degraded_performance: 'Degraded', partial_outage: 'Partial Outage', major_outage: 'Major Outage', under_maintenance: 'Maintenance', investigating: 'Investigating', identified: 'Identified', monitoring: 'Monitoring', resolved: 'Resolved', scheduled: 'Scheduled', in_progress: 'In Progress', completed: 'Completed' };
+    const m = { operational: 'Operational', degraded_performance: 'Degraded', partial_outage: 'Partial Outage', major_outage: 'Major Outage', under_maintenance: 'Maintenance', investigating: 'Investigating', identified: 'Identified', monitoring: 'Monitoring', resolved: 'Resolved', scheduled: 'Scheduled', in_progress: 'In Progress', completed: 'Completed', none: 'None', minor: 'Minor', major: 'Major', critical: 'Critical' };
     return m[s] || s;
 }
 

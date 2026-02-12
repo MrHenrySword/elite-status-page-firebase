@@ -1,9 +1,15 @@
+node_modules/
 functions/node_modules/
 azure-devops-extension/node_modules/
 functions/.env
 functions/data.json
+functions/data.json.tmp
+functions/data.json.corrupt.*
 functions/audit.log
 .firebase/
 firebase-debug.log
 .tmp-*.js
 *.vsix
+cookies*.txt
+production-*
+node_modules

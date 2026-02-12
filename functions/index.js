@@ -21,8 +21,10 @@ const COL_PUBLIC_PROJECTS = 'status_public_projects';
 const COL_AUDIT = 'status_audit';
 const META_DOC_ID = 'main';
 
-const DATA_FILE = path.join(__dirname, 'data.json');
-const LOG_FILE = path.join(__dirname, 'audit.log');
+const isCloudFunctions = !!process.env.K_SERVICE || !!process.env.FUNCTION_TARGET;
+const dataDir = isCloudFunctions ? '/tmp' : __dirname;
+const DATA_FILE = path.join(dataDir, 'data.json');
+const LOG_FILE = path.join(dataDir, 'audit.log');
 const DATA_PATH = path.resolve(DATA_FILE);
 const LOG_PATH = path.resolve(LOG_FILE);
 
@@ -98,6 +100,11 @@ function normalizePublicSettings(input) {
 		companyUrl: settings.companyUrl || '',
 		supportUrl: settings.supportUrl || '',
 		privacyPolicyUrl: settings.privacyPolicyUrl || '',
+		statusPageLogoUrl: settings.statusPageLogoUrl || '',
+		adminPanelLogoUrl: settings.adminPanelLogoUrl || '',
+		displayMode: settings.displayMode || 'single',
+		secondaryProjectId: settings.secondaryProjectId || null,
+		tertiaryProjectId: settings.tertiaryProjectId || null,
 		defaultSmsCountryCode: settings.defaultSmsCountryCode || '+1',
 		timezone: settings.timezone || 'UTC',
 		googleAnalyticsTrackingId: settings.googleAnalyticsTrackingId || '',
@@ -317,12 +324,18 @@ async function bootstrapFirestoreCollectionsIfNeeded() {
 	}
 }
 
-const appPromise = (async () => {
-	await hydrateLocalFilesFromFirestore();
-	await bootstrapFirestoreCollectionsIfNeeded();
-	patchFsForFirestoreSync();
-	return require('./server');
-})();
+let appPromise;
+function getApp() {
+	if (!appPromise) {
+		appPromise = (async () => {
+			await hydrateLocalFilesFromFirestore();
+			await bootstrapFirestoreCollectionsIfNeeded();
+			patchFsForFirestoreSync();
+			return require('./server');
+		})();
+	}
+	return appPromise;
+}
 
 exports.api = onRequest(
 	{
@@ -331,7 +344,7 @@ exports.api = onRequest(
 		timeoutSeconds: 60
 	},
 	async (req, res) => {
-		const app = await appPromise;
+		const app = await getApp();
 		return app(req, res);
 	}
 );

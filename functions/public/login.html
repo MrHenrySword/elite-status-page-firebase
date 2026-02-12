@@ -33,17 +33,27 @@
         .demo code{background:#e9e5ff;padding:2px 6px;border-radius:var(--radius-sm);font-size:12px}
         .back-link{text-align:center;margin-top:20px}
         .back-link a{font-size:13px;color:var(--brand-primary)}
+        :focus-visible{outline:2px solid var(--brand-primary);outline-offset:2px}
+
+        @media(prefers-color-scheme:dark){
+            .login-card{background:var(--surface-elevated)}
+            .demo{background:rgba(135,56,255,.1)}
+            .demo code{background:rgba(135,56,255,.2)}
+            .form-group input{background:var(--surface);color:var(--text-primary);border-color:var(--border)}
+            .error{background:rgba(199,59,74,.15)}
+        }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <div class="logo">
+<noscript><p style="padding:40px;text-align:center">JavaScript is required to sign in.</p></noscript>
+    <main role="main" class="login-card">
+        <div class="logo" role="banner">
             <img class="brand-logo full" src="/assets/brand/Elite-Logo-01.png" alt="Elite Status">
             <h1>Status Page Admin</h1>
             <p>Sign in to manage your status page</p>
         </div>
 
-        <div class="error" id="error">Invalid username or password</div>
+        <div class="error" id="error" role="alert" aria-live="assertive">Invalid username or password</div>
 
         <form id="loginForm">
             <div class="form-group">
@@ -60,7 +70,7 @@
         <div class="back-link">
             <a href="/index.html">&larr; Back to Status Page</a>
         </div>
-    </div>
+    </main>
 
     <script>
         (async () => {
