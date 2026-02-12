@@ -7,7 +7,7 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
-    "public": "functions/public",
+    "public": "hosting",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -40,6 +40,10 @@
       },
       {
         "source": "/health",
+        "function": "api"
+      },
+      {
+        "source": "/p/**",
         "function": "api"
       },
       {

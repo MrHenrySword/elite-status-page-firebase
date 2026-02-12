@@ -17,7 +17,9 @@ module.exports = {
 	FUNCTIONS_DIR,
 	DATA_FILE: path.join(dataDir, 'data.json'),
 	LOG_FILE: path.join(dataDir, 'audit.log'),
-	PUBLIC_DIR: path.join(FUNCTIONS_DIR, 'public'),
+	PUBLIC_DIR: isCloudFunctions
+		? path.join(FUNCTIONS_DIR, 'public')
+		: path.join(FUNCTIONS_DIR, '..', 'hosting'),
 	AUTH_COOKIE_NAME: 'statusPageToken',
 	TOKEN_TTL_MS: 24 * 60 * 60 * 1000,
 	BCRYPT_ROUNDS: Math.max(10, Math.min(15, parseInt(process.env.BCRYPT_ROUNDS || '12', 10) || 12)),

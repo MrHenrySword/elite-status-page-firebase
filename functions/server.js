@@ -8,6 +8,8 @@ const helmet = require('helmet');
 // ── Initialize data layer ───────────────────────────────────────────────
 const { PUBLIC_DIR } = require('./lib/constants');
 const { safePublicPath } = require('./lib/helpers');
+const isCloudFunctions = !!process.env.K_SERVICE || !!process.env.FUNCTION_TARGET;
+const hasPublicDir = PUBLIC_DIR && fs.existsSync(PUBLIC_DIR);
 const { initDb, getProjectBySlug } = require('./services/dataStore');
 const { trackProjectPageView } = require('./services/analyticsService');
 
@@ -45,7 +47,7 @@ app.use(helmet({
 			scriptSrcAttr: null,
 			styleSrc: ["'self'", "'unsafe-inline'"],
 			imgSrc: ["'self'", 'data:', 'https:'],
-			connectSrc: ["'self'", 'http://localhost:3000'],
+			connectSrc: ["'self'", 'https://*.firebaseio.com', 'https://*.googleapis.com', 'wss://*.firebaseio.com', 'http://localhost:3000'],
 			fontSrc: ["'self'"],
 			frameSrc: ["'none'"],
 			objectSrc: ["'none'"],
@@ -62,11 +64,13 @@ app.use((err, _req, res, next) => {
 });
 app.use(securityMiddleware);
 app.use(hostResolverMiddleware);
-app.use(express.static(path.join(__dirname, 'public'), {
-	setHeaders: (res, filePath) => {
-		if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-store');
-	}
-}));
+if (hasPublicDir) {
+	app.use(express.static(PUBLIC_DIR, {
+		setHeaders: (res, filePath) => {
+			if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-store');
+		}
+	}));
+}
 app.use(corsMiddleware);
 
 // ── Public API ──────────────────────────────────────────────────────────
@@ -112,27 +116,28 @@ app.get('/api/metrics', (req, res) => {
 
 app.get('/favicon.ico', (_req, res) => res.status(204).end());
 
-// ── Project permalink ───────────────────────────────────────────────────
-app.get('/p/:slug', (req, res) => {
-	const project = getProjectBySlug(req.params.slug);
-	if (project) trackProjectPageView(project, req);
-	res.setHeader('Cache-Control', 'no-store');
-	res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
-});
+// ── Project permalink & SPA fallback ─────────────────────────────────────
+if (hasPublicDir) {
+	app.get('/p/:slug', (req, res) => {
+		const project = getProjectBySlug(req.params.slug);
+		if (project) trackProjectPageView(project, req);
+		res.setHeader('Cache-Control', 'no-store');
+		res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+	});
 
-// ── SPA fallback ────────────────────────────────────────────────────────
-app.get('*', (req, res) => {
-	if ((req.path === '/' || req.path === '/index.html') && req.hostProject) {
-		trackProjectPageView(req.hostProject, req);
-	}
-	const requestedFile = safePublicPath(req.path);
-	if (requestedFile && fs.existsSync(requestedFile) && fs.statSync(requestedFile).isFile()) {
-		if (requestedFile.endsWith('.html')) res.setHeader('Cache-Control', 'no-store');
-		return res.sendFile(requestedFile);
-	}
-	res.setHeader('Cache-Control', 'no-store');
-	res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
-});
+	app.get('*', (req, res) => {
+		if ((req.path === '/' || req.path === '/index.html') && req.hostProject) {
+			trackProjectPageView(req.hostProject, req);
+		}
+		const requestedFile = safePublicPath(req.path);
+		if (requestedFile && fs.existsSync(requestedFile) && fs.statSync(requestedFile).isFile()) {
+			if (requestedFile.endsWith('.html')) res.setHeader('Cache-Control', 'no-store');
+			return res.sendFile(requestedFile);
+		}
+		res.setHeader('Cache-Control', 'no-store');
+		res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+	});
+}
 
 // ── Global error handler ────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {

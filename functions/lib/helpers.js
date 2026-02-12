@@ -81,6 +81,7 @@ function getDateKey(dateValue) {
 }
 
 function safePublicPath(rawPath) {
+	if (!PUBLIC_DIR) return null;
 	try {
 		const decoded = decodeURIComponent(String(rawPath || '/'));
 		const normalized = path.posix.normalize(decoded.replace(/\\/g, '/'));

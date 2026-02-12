@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - 3E Elite Status</title>
+    <link rel="icon" href="/assets/brand/Elite-Logo-01.png" type="image/png">
+    <link rel="apple-touch-icon" href="/assets/brand/Elite-Logo-01.png">
+    <meta property="og:title" content="3E Elite Status Login">
+    <meta property="og:description" content="Admin access to status management.">
+    <meta property="og:image" content="/assets/brand/Elite-Logo-01.png">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="/assets/brand/Elite-Logo-01.png">
+    <link rel="stylesheet" href="/theme.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--surface);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;color:var(--text-primary)}
+        .login-card{background:#fff;border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:40px;width:100%;max-width:420px;border:1px solid var(--border)}
+        .logo{text-align:center;margin-bottom:28px}
+        .logo img{height:32px;margin-bottom:12px}
+        .logo h1{font-size:22px;font-weight:700;color:var(--text-primary)}
+        .logo p{font-size:13px;color:var(--text-secondary);margin-top:4px}
+        .form-group{margin-bottom:20px}
+        .form-group label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-primary)}
+        .form-group input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;transition:border-color .15s}
+        .form-group input:focus{outline:none;border-color:var(--brand-primary);box-shadow:0 0 0 2px rgba(135,56,255,.2)}
+        .btn-login{width:100%;background:var(--brand-primary);color:#fff;border:none;padding:12px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+        .btn-login:hover{background:var(--brand-primary-hover)}
+        .btn-login:disabled{background:#ccc;cursor:not-allowed}
+        .error{background:#fce8e6;color:var(--error);padding:10px 12px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:16px;display:none}
+        .error.show{display:block}
+        .demo{background:#f6f5ff;padding:14px;border-radius:var(--radius-sm);margin-top:20px;font-size:12px;color:var(--text-secondary);text-align:center}
+        .demo code{background:#e9e5ff;padding:2px 6px;border-radius:var(--radius-sm);font-size:12px}
+        .back-link{text-align:center;margin-top:20px}
+        .back-link a{font-size:13px;color:var(--brand-primary)}
+        :focus-visible{outline:2px solid var(--brand-primary);outline-offset:2px}
+
+        @media(prefers-color-scheme:dark){
+            .login-card{background:var(--surface-elevated)}
+            .demo{background:rgba(135,56,255,.1)}
+            .demo code{background:rgba(135,56,255,.2)}
+            .form-group input{background:var(--surface);color:var(--text-primary);border-color:var(--border)}
+            .error{background:rgba(199,59,74,.15)}
+        }
+    </style>
+</head>
+<body>
+<noscript><p style="padding:40px;text-align:center">JavaScript is required to sign in.</p></noscript>
+    <main role="main" class="login-card">
+        <div class="logo" role="banner">
+            <img class="brand-logo full" src="/assets/brand/Elite-Logo-01.png" alt="Elite Status">
+            <h1>Status Page Admin</h1>
+            <p>Sign in to manage your status page</p>
+        </div>
+
+        <div class="error" id="error" role="alert" aria-live="assertive">Invalid username or password</div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autofocus autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn-login" id="loginBtn">Sign In</button>
+        </form>
+
+        <div class="back-link">
+            <a href="/index.html">&larr; Back to Status Page</a>
+        </div>
+    </main>
+
+    <script>
+        (async () => {
+            try {
+                const r = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
+                if (r.ok) window.location.href = '/admin.html';
+            } catch {}
+        })();
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const error = document.getElementById('error');
+            error.classList.remove('show');
+            btn.disabled = true;
+            btn.textContent = 'Signing in...';
+
+            try {
+                const r = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+                const data = await r.json();
+                if (r.ok && data.user) {
+                    localStorage.setItem('statusPageUser', JSON.stringify(data.user));
+                    window.location.href = '/admin.html';
+                } else {
+                    error.textContent = data.error || 'Login failed';
+                    error.classList.add('show');
+                }
+            } catch (err) {
+                error.textContent = 'Network error. Is the server running?';
+                error.classList.add('show');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Sign In';
+        });
+    </script>
+</body>
+</html>

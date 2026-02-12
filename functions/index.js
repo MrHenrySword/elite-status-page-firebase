@@ -1,12 +1,22 @@
 const fs = require('fs');
 const path = require('path');
-const admin = require('firebase-admin');
 const logger = require('firebase-functions/logger');
 const { onRequest } = require('firebase-functions/v2/https');
 
-admin.initializeApp();
+// ── Lazy Firebase Admin init (avoids deployment analysis timeout) ────────
+let _admin, _firestore;
+function getAdmin() {
+	if (!_admin) {
+		_admin = require('firebase-admin');
+		_admin.initializeApp();
+	}
+	return _admin;
+}
+function getFirestore() {
+	if (!_firestore) _firestore = getAdmin().firestore();
+	return _firestore;
+}
 
-const firestore = admin.firestore();
 const firestoreSyncEnabled = Boolean(
 	process.env.FIRESTORE_EMULATOR_HOST ||
 	process.env.GCLOUD_PROJECT ||
@@ -173,7 +183,7 @@ async function commitOps(ops) {
 	if (!ops.length) return;
 	const chunkSize = 400;
 	for (let i = 0; i < ops.length; i += chunkSize) {
-		const batch = firestore.batch();
+		const batch = getFirestore().batch();
 		for (const op of ops.slice(i, i + chunkSize)) {
 			if (op.type === 'set') batch.set(op.ref, op.data, { merge: false });
 			else if (op.type === 'delete') batch.delete(op.ref);
@@ -183,7 +193,7 @@ async function commitOps(ops) {
 }
 
 async function upsertCollectionById(collectionName, items) {
-	const collRef = firestore.collection(collectionName);
+	const collRef = getFirestore().collection(collectionName);
 	const snap = await collRef.get();
 	const existing = new Set(snap.docs.map((d) => d.id));
 	const nextIds = new Set();
@@ -212,16 +222,16 @@ async function persistDataToCollections(data) {
 		schemaVersion: 1
 	};
 
-	await firestore.collection(COL_META).doc(META_DOC_ID).set(metaPayload, { merge: false });
+	await getFirestore().collection(COL_META).doc(META_DOC_ID).set(metaPayload, { merge: false });
 	await upsertCollectionById(COL_USERS, users);
 	await upsertCollectionById(COL_PROJECTS, projects);
 	await upsertCollectionById(COL_PUBLIC_PROJECTS, projects.map(sanitizePublicProject));
 }
 
 async function loadDataFromCollections() {
-	const metaSnap = await firestore.collection(COL_META).doc(META_DOC_ID).get();
-	const usersSnap = await firestore.collection(COL_USERS).get();
-	const projectsSnap = await firestore.collection(COL_PROJECTS).get();
+	const metaSnap = await getFirestore().collection(COL_META).doc(META_DOC_ID).get();
+	const usersSnap = await getFirestore().collection(COL_USERS).get();
+	const projectsSnap = await getFirestore().collection(COL_PROJECTS).get();
 
 	const users = usersSnap.docs.map((d) => d.data()).sort(byNumericId);
 	const projects = projectsSnap.docs.map((d) => d.data()).sort(byNumericId);
@@ -238,7 +248,7 @@ async function loadDataFromCollections() {
 }
 
 async function loadAuditFromCollection(limit = 5000) {
-	const snap = await firestore.collection(COL_AUDIT).orderBy('at', 'asc').limit(limit).get();
+	const snap = await getFirestore().collection(COL_AUDIT).orderBy('at', 'asc').limit(limit).get();
 	return snap.docs.map((d) => d.data());
 }
 
@@ -267,7 +277,7 @@ function patchFsForFirestoreSync() {
 		enqueueSync(async () => {
 			const ops = entries.map((entry) => ({
 				type: 'set',
-				ref: firestore.collection(COL_AUDIT).doc(),
+				ref: getFirestore().collection(COL_AUDIT).doc(),
 				data: entry
 			}));
 			await commitOps(ops);
@@ -308,8 +318,8 @@ async function bootstrapFirestoreCollectionsIfNeeded() {
 
 	try {
 		const [metaSnap, publicSnap] = await Promise.all([
-			firestore.collection(COL_META).doc(META_DOC_ID).get(),
-			firestore.collection(COL_PUBLIC_PROJECTS).limit(1).get()
+			getFirestore().collection(COL_META).doc(META_DOC_ID).get(),
+			getFirestore().collection(COL_PUBLIC_PROJECTS).limit(1).get()
 		]);
 
 		// If core data and public projections are already present, skip bootstrap writes.

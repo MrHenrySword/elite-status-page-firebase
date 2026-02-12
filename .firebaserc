@@ -1,15 +1,5 @@
 {
   "projects": {
     "default": "status-page-b8b51"
-  },
-  "targets": {
-    "status-page-b8b51": {
-      "hosting": {
-        "main": [
-          "status-page-b8b51-main"
-        ]
-      }
-    }
-  },
-  "etags": {}
+  }
 }
